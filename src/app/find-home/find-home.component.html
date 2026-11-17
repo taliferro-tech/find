@@ -31,6 +31,11 @@
       <span>{{ profile.rank.name }} · {{ profile.score | number }}</span>
       <span class="find-rank-chip__streak" *ngIf="profile.streak.count > 1"><i class="fa-solid fa-fire" aria-hidden="true"></i> {{ profile.streak.count }}</span>
     </button>
+    <button type="button" class="find-daily-entry" (click)="setView('daily')">
+      <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+      <span><strong>Daily Find</strong> <small>Today’s question for everyone</small></span>
+      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+    </button>
     <p class="find-error" *ngIf="errorMessage">{{ errorMessage }}</p>
     <a class="find-app-store-badge" href="https://apps.apple.com/us/app/taliferro-find/id6806954591" target="_blank" rel="noopener noreferrer" aria-label="Download Find on the App Store">
       <i class="fa-brands fa-apple" aria-hidden="true"></i>
@@ -102,6 +107,11 @@
     </div>
     <!-- Shown once result is available -->
     <ng-container *ngIf="result && !isLoading && !showEntityCard">
+      <!-- Daily Find: back to today's question while playing it. -->
+      <button type="button" class="find-daily-banner" *ngIf="dailyService.playingDate" (click)="setView('daily')">
+        <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+        <span>Daily Find: found it? <strong>Answer</strong></span>
+      </button>
       <!-- Pager: Back/Previous | progress segments + "N of M · See all" | Next -->
       <nav class="find-pager" aria-label="Results">
         <button type="button" class="find-pager__link find-pager__link--prev" (click)="onPreviousResult()" [attr.aria-label]="pagerPrevious.label + ': ' + pagerPrevious.title">
@@ -659,6 +669,15 @@
     <!-- Company, products and policy links. Kept off the search screen,
          where it competed with the search. -->
     <app-site-footer><a href="/guides">Guides</a><a routerLink="/help">Help</a><a routerLink="/about">About</a></app-site-footer>
+  </div>
+  <!-- ── DAILY FIND VIEW ──────────────────────────────────────── -->
+  <div class="find-awards-screen" data-cy="find-daily-shell" *ngIf="activeView === 'daily'">
+    <div class="find-screen-header">
+      <button class="find-screen-header__back" type="button" (click)="resetToSearch()" aria-label="Home"><i class="fa-solid fa-house" aria-hidden="true"></i></button>
+      <h2>Daily Find</h2>
+      <span class="find-screen-header__spacer" aria-hidden="true"></span>
+    </div>
+    <app-find-daily (search)="runDailySearch($event)" (unlock)="onDailyUnlock($event)"></app-find-daily>
   </div>
   <!-- ── AWARDS VIEW ──────────────────────────────────────────── -->
   <div class="find-awards-screen" data-cy="find-awards-shell" *ngIf="activeView === 'awards'">

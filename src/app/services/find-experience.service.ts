@@ -531,6 +531,8 @@ export interface FindSearchResponse {
   rssBacked?: boolean;
   /** What this search earned (Find Score), when the backend recorded it. */
   score?: FindScoreAward;
+  /** Daily Find: this search counted toward today's question. */
+  daily?: { date: string; searches: number };
   timings?: {
     totalMs: number;
     planMs: number;
@@ -592,6 +594,29 @@ export interface FindScoreProfile {
   badges: FindScoreBadge[];
 }
 
+/** Today's Daily Find for this browser (findDaily.service.js). */
+export interface FindDailyState {
+  available: boolean;
+  date: string;
+  question?: string;
+  status?: 'new' | 'playing' | 'answered';
+  searches?: number;
+  /** Only after the first search. */
+  choices?: string[];
+  result?: {
+    choice: number;
+    correct: boolean;
+    answerIndex: number;
+    points: number;
+    beat: number | null;
+    explanation: string;
+    sourceUrl: string;
+    sourceTitle: string;
+  };
+  /** What answering earned (Find Score), on the answer reply only. */
+  score?: FindScoreAward;
+}
+
 /**
  * What a streamed search sends while it works (results first): the stage it's
  * on, the web search's cards before any page is checked, then the full response.
@@ -616,6 +641,7 @@ export class FindExperienceService {
     maxResults?: number;
     latitude?: number | null;
     longitude?: number | null;
+    dailyDate?: string | null;
   } ): Observable<FindSearchResponse> {
     const headers = new HttpHeaders().set( 'Authorization', `Bearer ${environment.apiKey}` );
     const body = this.searchBody( payload );
@@ -630,6 +656,7 @@ export class FindExperienceService {
     maxResults?: number;
     latitude?: number | null;
     longitude?: number | null;
+    dailyDate?: string | null;
   } ) {
     const postalCode = this.extractPostalCode( payload?.query );
     const hasCoordinates = Number.isFinite( payload?.latitude ) && Number.isFinite( payload?.longitude );
@@ -643,7 +670,9 @@ export class FindExperienceService {
       // Answer types this app can show; the backend leaves them out for apps that can't.
       features: [ 'instant', 'units' ],
       // Find Score: the backend adds this browser's points for the search.
-      deviceId: this.deviceId
+      deviceId: this.deviceId,
+      // Daily Find: a search made while playing today's question.
+      ...( payload?.dailyDate ? { dailyDate: payload.dailyDate } : {} )
     };
     return body;
   }
@@ -792,8 +821,12 @@ export class FindExperienceService {
   // --- Find Score. Every call is a POST so the device ID never lands in a URL. ---
 
   private scorePost<T> ( path: string, body: Record<string, unknown> = {} ): Observable<T> {
+    return this.devicePost<T>( `/find/score/${ path }`, body );
+  }
+
+  private devicePost<T> ( path: string, body: Record<string, unknown> = {} ): Observable<T> {
     const headers = new HttpHeaders().set( 'Authorization', `Bearer ${environment.apiKey}` );
-    return this.postWithLocalFallback<T>( `/find/score/${ path }`, { deviceId: this.deviceId, ...body }, { headers } );
+    return this.postWithLocalFallback<T>( path, { deviceId: this.deviceId, ...body }, { headers } );
   }
 
   scoreProfile (): Observable<{ success: boolean; profile: FindScoreProfile }> {
@@ -815,6 +848,20 @@ export class FindExperienceService {
 
   recoverScore ( code: string ): Observable<{ success: boolean; profile: FindScoreProfile }> {
     return this.scorePost( 'recover', { code } );
+  }
+
+  // --- Daily Find ---
+
+  dailyFind (): Observable<{ success: boolean; daily: FindDailyState }> {
+    return this.devicePost( '/find/daily', { timeZone: this.userTimeZone() } );
+  }
+
+  startDailyFind ( date: string ): Observable<{ success: boolean; daily: FindDailyState }> {
+    return this.devicePost( '/find/daily/start', { date, timeZone: this.userTimeZone() } );
+  }
+
+  answerDailyFind ( date: string, choice: number ): Observable<{ success: boolean; daily: FindDailyState }> {
+    return this.devicePost( '/find/daily/answer', { date, choice, timeZone: this.userTimeZone() } );
   }
 
   /** Someone opened a find this person shared (the share link's `ref`). */

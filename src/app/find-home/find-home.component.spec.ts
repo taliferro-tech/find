@@ -1495,6 +1495,58 @@ describe('FindHomeComponent', () => {
     expect(component.editingNickname).toBeTrue();
   }));
 
+  it('plays a Daily Find: start, search in Find, answer, and see how others did (2026-11-17)', fakeAsync(() => {
+    const base = { available: true, date: '2026-11-17', question: 'What year did the Space Needle open?' };
+    component.setView('daily');
+    harness.detectChanges();
+    http.expectOne(r => r.url.endsWith('/find/daily')).flush({ success: true, daily: { ...base, status: 'new', searches: 0 } });
+    tick();
+    harness.detectChanges();
+    const screen = () => root().querySelector('[data-cy="find-daily-shell"]')!;
+    expect(screen().textContent).toContain('What year did the Space Needle open?');
+
+    screen().querySelector<HTMLButtonElement>('.fdy__primary')!.click();
+    const start = http.expectOne(r => r.url.endsWith('/find/daily/start'));
+    expect(start.request.body.date).toBe('2026-11-17');
+    start.flush({ success: true, daily: { ...base, status: 'playing', searches: 0 } });
+    tick();
+    harness.detectChanges();
+    expect(screen().textContent).toContain('answers show up after your first search');
+
+    // The search runs in Find, tagged for today's question.
+    component.runDailySearch('space needle opened year');
+    tick();
+    const search = http.expectOne(r => r.url.endsWith('/find/search'));
+    expect(search.request.body.dailyDate).toBe('2026-11-17');
+    search.flush(makeEntityResponse('space needle opened year', { daily: { date: '2026-11-17', searches: 1 } } as Partial<FindSearchResponse>));
+    tick();
+    harness.detectChanges();
+    drainSummarize();
+    // The first counted search unlocks the choices.
+    http.expectOne(r => r.url.endsWith('/find/daily')).flush({ success: true, daily: { ...base, status: 'playing', searches: 1, choices: ['1958', '1962', '1965', '1970'] } });
+    tick();
+    harness.detectChanges();
+    expect(root().querySelector('.find-daily-banner')).toBeTruthy();
+
+    component.setView('daily');
+    harness.detectChanges();
+    http.expectOne(r => r.url.endsWith('/find/daily')).flush({ success: true, daily: { ...base, status: 'playing', searches: 1, choices: ['1958', '1962', '1965', '1970'] } });
+    tick();
+    harness.detectChanges();
+    const choices = Array.from(screen().querySelectorAll<HTMLButtonElement>('.fdy__choice'));
+    expect(choices.map(choice => choice.textContent?.trim())).toEqual(['1958', '1962', '1965', '1970']);
+    choices[1].click();
+    const answer = http.expectOne(r => r.url.endsWith('/find/daily/answer'));
+    expect(answer.request.body).toEqual(jasmine.objectContaining({ date: '2026-11-17', choice: 1 }));
+    answer.flush({ success: true, daily: { ...base, status: 'answered', searches: 1, choices: ['1958', '1962', '1965', '1970'],
+      result: { choice: 1, correct: true, answerIndex: 1, points: 100, beat: 72, explanation: 'It opened in 1962.', sourceUrl: 'https://www.spaceneedle.com/history', sourceTitle: 'History' } } });
+    tick();
+    harness.detectChanges();
+    expect(screen().textContent).toContain('Right!');
+    expect(screen().textContent).toContain('100');
+    expect(screen().textContent).toContain('You beat 72% of Finders today.');
+  }));
+
   it('shows the awards progress from the Awards tab', fakeAsync(() => {
     byLabel('Awards').click();
     harness.detectChanges();

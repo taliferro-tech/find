@@ -10,6 +10,8 @@ import { FindGyroscopeService, GyroTilt } from '../services/find-gyroscope.servi
 import { HeadlineFeedsService } from '../services/headline-feeds.service';
 import { environment } from '../../environments/environment';
 import { AwardBadgeComponent } from '../shared/award-badge/award-badge.component';
+import { FindDailyComponent } from './daily/find-daily.component';
+import { FindDailyService } from '../services/find-daily.service';
 import { PlatformMenuComponent } from '../shared/platform-menu/platform-menu.component';
 import { SeoService } from '../shared/seo.service';
 import { Title, Meta } from '@angular/platform-browser';
@@ -27,7 +29,7 @@ import { FindMusicCardComponent } from './music-card/find-music-card.component';
 import { FindCompanyCardComponent } from './company-card/find-company-card.component';
 import { FindWelcomeComponent } from './welcome/find-welcome.component';
 
-type FindView = 'search' | 'result' | 'detail' | 'booklet' | 'history' | 'info' | 'awards';
+type FindView = 'search' | 'result' | 'detail' | 'booklet' | 'history' | 'info' | 'awards' | 'daily';
 
 interface FindQuickAction {
   label: string;
@@ -69,7 +71,7 @@ function distanceMeters ( from: { latitude: number; longitude: number }, latitud
 @Component( {
   selector: 'app-find-home',
   standalone: true,
-  imports: [ FindEntityCardComponent, FindBusinessCardComponent, FindShopCardComponent, FindWordCardComponent, FindRegionCardComponent, FindMediaCardComponent, FindMusicCardComponent, FindCompanyCardComponent, MarketStripComponent, AlsoFromUsComponent, SiteFooterComponent, CommonModule, FormsModule, RouterModule, FindSwipeDirective, PlatformMenuComponent, AwardBadgeComponent, FindWelcomeComponent],
+  imports: [ FindEntityCardComponent, FindBusinessCardComponent, FindShopCardComponent, FindWordCardComponent, FindRegionCardComponent, FindMediaCardComponent, FindMusicCardComponent, FindCompanyCardComponent, MarketStripComponent, AlsoFromUsComponent, SiteFooterComponent, CommonModule, FormsModule, RouterModule, FindSwipeDirective, PlatformMenuComponent, AwardBadgeComponent, FindWelcomeComponent, FindDailyComponent],
   templateUrl: './find-home.component.html',
   styleUrls: ['./find-home.component.css', './find-home.grid.css', './find-home.features.css', './find-home.score.css'],
   // The prerendered "/" always contains the home screen, but a `?query=` or
@@ -226,6 +228,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     private readonly router: Router,
     private readonly gyroscope: FindGyroscopeService,
     private readonly awardsService: FindAwardsService,
+    readonly dailyService: FindDailyService,
     private readonly title: Title,
     private readonly meta: Meta,
     private readonly seo: SeoService,
@@ -284,6 +287,8 @@ export class FindHomeComponent implements OnInit, OnDestroy {
       }
       // A friend's score link (find.16ahead.com/p/<code>): "See how you'd score".
       if ( params.get( 'score' ) === '1' ) this.setView( 'awards' );
+      // A shared Daily Find result: "Can you beat it?"
+      if ( params.get( 'daily' ) === '1' ) this.setView( 'daily' );
       this.selectedResultIndex = 0;
     } );
   }
@@ -862,6 +867,16 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     ctx.font = font( 400, 38 );
     ctx.fillText( 'See how you’d score · find.16ahead.com', 96, 960, 888 );
     return new Promise( ( resolve ) => canvas.toBlob( ( blob ) => resolve( blob ? new File( [ blob ], 'find-score.png', { type: 'image/png' } ) : null ), 'image/png' ) );
+  }
+
+  /** Daily Find: run the player's search in Find, counted for today's question. */
+  runDailySearch ( query: string ): void {
+    this.query = query;
+    this.onSubmit();
+  }
+
+  onDailyUnlock ( award: FindAward ): void {
+    if ( !this.pendingAwardUnlock ) this.pendingAwardUnlock = award;
   }
 
   /** Credits whoever shared the link this visit came from, once per link per browser. */
@@ -2050,7 +2065,9 @@ export class FindHomeComponent implements OnInit, OnDestroy {
         context: normalizedContext || null,
         maxResults: 16,
         latitude: coords?.latitude ?? null,
-        longitude: coords?.longitude ?? null
+        longitude: coords?.longitude ?? null,
+        // Daily Find: searches while playing today's question count toward it.
+        dailyDate: this.dailyService.playingDate
       } ).subscribe( {
         next: ( event ) => {
           // A newer search started; this one's messages no longer apply.
@@ -2204,6 +2221,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     // Find Score: the backend's points when it scored the search, else the
     // old on-device count.
     this.resultAward = response?.score || null;
+    this.dailyService.noteSearch( response?.daily );
     const newlyUnlocked = response?.score ? this.awardsService.applyAward( response.score ) : this.awardsService.recordSearch();
     if ( newlyUnlocked ) this.pendingAwardUnlock = newlyUnlocked;
     const isLocalResult = response?.queryType === 'local';
