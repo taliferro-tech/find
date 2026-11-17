@@ -13,6 +13,7 @@ import { AwardBadgeComponent } from '../shared/award-badge/award-badge.component
 import { FindDailyComponent } from './daily/find-daily.component';
 import { FindCrewsComponent } from './crews/find-crews.component';
 import { FindDailyService } from '../services/find-daily.service';
+import { SoundService } from '../services/sound.service';
 import { PlatformMenuComponent } from '../shared/platform-menu/platform-menu.component';
 import { SeoService } from '../shared/seo.service';
 import { Title, Meta } from '@angular/platform-browser';
@@ -92,6 +93,10 @@ export class FindHomeComponent implements OnInit, OnDestroy {
   lastResponseMs = 0;
   /** Results first: cards are showing and Find is still checking their pages. */
   isRefining = false;
+  /** "Let me know when it's ready": offered once a search has run 8 seconds. */
+  notifyOffer = false;
+  notifyWhenReady = false;
+  private titleBeforeReady = '';
   searchStage: 'planning' | 'checking' = 'planning';
   checkingPageCount = 0;
 
@@ -233,6 +238,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     private readonly gyroscope: FindGyroscopeService,
     private readonly awardsService: FindAwardsService,
     readonly dailyService: FindDailyService,
+    private readonly sound: SoundService,
     private readonly title: Title,
     private readonly meta: Meta,
     private readonly seo: SeoService,
@@ -300,6 +306,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy (): void {
+    this.clearNotifyOffer();
     this.routeSub?.unsubscribe();
     this.gyroSub?.unsubscribe();
     this.summarySub?.unsubscribe();
@@ -1981,6 +1988,8 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     this.loadingTimer = setInterval( () => {
       if ( this.loadingStartedAtMs === null ) return;
       this.loadingElapsedMs = Date.now() - this.loadingStartedAtMs;
+      // "Let me know when it's ready" once a search has run 8 seconds.
+      if ( this.loadingElapsedMs >= 8000 && ( this.isLoading || this.isRefining ) ) this.notifyOffer = true;
     }, 100 );
   }
 
@@ -2044,6 +2053,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     this.isRefining = false;
     this.searchStage = 'planning';
     this.checkingPageCount = 0;
+    this.clearNotifyOffer();
     this.startLoadingTimer();
     this.errorMessage = '';
     // Switch to result view immediately so the loading spinner shows there
@@ -2188,7 +2198,44 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     this.entityDismissed = false;
   }
 
+  private clearNotifyOffer (): void {
+    this.notifyOffer = false;
+    this.notifyWhenReady = false;
+  }
+
+  /** "Let me know when it's ready": a browser notification too, if allowed. */
+  requestReadyNotice (): void {
+    this.notifyWhenReady = true;
+    try {
+      if ( typeof Notification !== 'undefined' && Notification.permission === 'default' ) void Notification.requestPermission();
+    } catch { /* not supported */ }
+  }
+
+  /** The search finished while the person was in another tab. */
+  private announceReady ( query: string ): void {
+    if ( !this.notifyWhenReady ) return;
+    this.notifyWhenReady = false;
+    this.notifyOffer = false;
+    if ( typeof document === 'undefined' || !document.hidden ) return;
+    this.titleBeforeReady = document.title;
+    document.title = `Ready: ${ query } · Find`;
+    this.sound.playSound( 'notification' );
+    try {
+      if ( typeof Notification !== 'undefined' && Notification.permission === 'granted' ) {
+        const notice = new Notification( 'Your Find is ready', { body: query, icon: '/assets/brand/products/png/light/11-find.png' } );
+        notice.onclick = () => { window.focus(); notice.close(); };
+      }
+    } catch { /* not supported */ }
+    const restore = () => {
+      if ( document.hidden ) return;
+      document.title = this.titleBeforeReady;
+      document.removeEventListener( 'visibilitychange', restore );
+    };
+    document.addEventListener( 'visibilitychange', restore );
+  }
+
   private showSearchError ( message?: string ): void {
+    this.clearNotifyOffer();
     this.isLoading = false;
     this.isRefining = false;
     this.stopLoadingTimer();
@@ -2222,6 +2269,8 @@ export class FindHomeComponent implements OnInit, OnDestroy {
   }
 
   private applySearchResponse ( response: FindSearchResponse, query: string ): void {
+    this.announceReady( query );
+    this.clearNotifyOffer();
     // The card someone is reading stays in front when the details arrive.
     const readingUrl = this.isRefining ? String( this.currentCard?.url || '' ) : '';
     this.isRefining = false;

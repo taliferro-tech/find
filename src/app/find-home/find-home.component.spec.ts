@@ -1577,6 +1577,31 @@ describe('FindHomeComponent', () => {
     expect(screen.textContent).toContain('2.5% of Finders');
   }));
 
+  it('a slow search offers "Let me know when it\'s ready" and flags the tab when it finishes (2026-11-17)', fakeAsync(() => {
+    component.query = 'slow search';
+    harness.detectChanges();
+    submitButton().click();
+    tick();
+    const req = http.expectOne(r => r.url.endsWith('/find/search'));
+    tick(7000);
+    harness.detectChanges();
+    expect(root().querySelector('.find-ready__ask')).toBeNull();
+    tick(1500);
+    harness.detectChanges();
+    root().querySelector<HTMLButtonElement>('.find-ready__ask')!.click();
+    harness.detectChanges();
+    expect(root().querySelector('.find-ready')?.textContent).toContain('We’ll let you know');
+
+    spyOnProperty(document, 'hidden').and.returnValue(true);
+    const before = document.title;
+    req.flush(makeEntityResponse('slow search'));
+    tick();
+    harness.detectChanges();
+    drainSummarize();
+    expect(document.title).toBe('Ready: slow search · Find');
+    document.title = before;
+  }));
+
   it('shows the awards progress from the Awards tab', fakeAsync(() => {
     byLabel('Awards').click();
     harness.detectChanges();
