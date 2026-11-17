@@ -556,6 +556,9 @@ export interface FindScoreBadge {
   goal?: string;
   state?: FindScoreBadgeState;
   earnedAt?: number;
+  /** Share of active Finders holding it (once enough people play). */
+  rarity?: number;
+  rare?: boolean;
 }
 
 export interface FindRank {
@@ -592,6 +595,30 @@ export interface FindScoreProfile {
   hasRecoveryCode: boolean;
   shareUrl: string;
   badges: FindScoreBadge[];
+  /** "Top 10% this week" (1, 5, 10 or 25), once enough people play. */
+  weekTop?: number | null;
+}
+
+/** A crew: a small private friends board (findCrews.service.js). */
+export interface FindCrewMember {
+  place: number;
+  nickname: string;
+  publicCode: string;
+  you: boolean;
+  weekScore: number;
+  score: number;
+  rank: string;
+  streak: number;
+  dailyToday: number | null;
+}
+
+export interface FindCrew {
+  code: string;
+  name: string;
+  inviteUrl: string;
+  isOwner: boolean;
+  week: string;
+  members: FindCrewMember[];
 }
 
 /** Today's Daily Find for this browser (findDaily.service.js). */
@@ -848,6 +875,28 @@ export class FindExperienceService {
 
   recoverScore ( code: string ): Observable<{ success: boolean; profile: FindScoreProfile }> {
     return this.scorePost( 'recover', { code } );
+  }
+
+  // --- Crews ---
+
+  crews (): Observable<{ success: boolean; crews: FindCrew[] }> {
+    return this.devicePost( '/find/crews', { timeZone: this.userTimeZone() } );
+  }
+
+  createCrew ( name: string ): Observable<{ success: boolean; crew: FindCrew }> {
+    return this.devicePost( '/find/crews/create', { name } );
+  }
+
+  previewCrew ( code: string ): Observable<{ success: boolean; crew: { code: string; name: string; memberCount: number } }> {
+    return this.devicePost( '/find/crews/preview', { code } );
+  }
+
+  joinCrew ( code: string ): Observable<{ success: boolean; crew: FindCrew }> {
+    return this.devicePost( '/find/crews/join', { code } );
+  }
+
+  leaveCrew ( code: string ): Observable<{ success: boolean }> {
+    return this.devicePost( '/find/crews/leave', { code } );
   }
 
   // --- Daily Find ---

@@ -1,0 +1,145 @@
+.fcr {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.fcr__title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--todd-panel-subtext);
+}
+
+.fcr__muted {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--todd-panel-subtext);
+}
+
+.fcr__crew {
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--todd-surface-2);
+}
+
+.fcr__crew-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--todd-panel-text);
+}
+
+.fcr__code {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--todd-panel-subtext);
+}
+
+.fcr__board {
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fcr__board li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid color-mix(in srgb, var(--todd-panel-subtext) 20%, transparent);
+  color: var(--todd-panel-text);
+}
+
+.fcr__board li:first-child {
+  border-top: 0;
+}
+
+.fcr__me {
+  font-weight: 700;
+}
+
+.fcr__place {
+  width: 1.4em;
+  text-align: center;
+  color: var(--todd-panel-subtext);
+  font-variant-numeric: tabular-nums;
+}
+
+.fcr__name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.fcr__name small {
+  display: block;
+  font-weight: 400;
+  color: var(--todd-panel-subtext);
+}
+
+.fcr__name small:first-of-type {
+  display: inline;
+}
+
+.fcr__name small i {
+  color: #ff9f43;
+}
+
+.fcr__points {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.fcr__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fcr__primary,
+.fcr__form button {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tl-blue);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.fcr__form button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.fcr__link {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--todd-panel-subtext);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.fcr__form {
+  display: flex;
+  gap: 8px;
+}
+
+.fcr__form input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--todd-panel-subtext);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--todd-panel-text);
+  font-size: 16px;
+}

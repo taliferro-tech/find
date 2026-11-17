@@ -187,6 +187,10 @@ describe('FindHomeComponent', () => {
       if (!pending.cancelled) pending.flush({ entity: null });
     }
     // Opening Awards loads the Find Score profile; unless a test answers, the backend is away.
+    // The Awards screen's crews: none unless a test says so.
+    for (const pending of http.match(r => r.url.endsWith('/find/crews'))) {
+      if (!pending.cancelled) pending.flush({ success: true, crews: [] });
+    }
     // (A failed local-emulator call retries the hosted API, so flush until none are left.)
     for (let round = 0; round < 3; round++) {
       for (const pending of http.match(r => r.url.includes('/find/score/'))) {
@@ -1545,6 +1549,32 @@ describe('FindHomeComponent', () => {
     expect(screen().textContent).toContain('Right!');
     expect(screen().textContent).toContain('100');
     expect(screen().textContent).toContain('You beat 72% of Finders today.');
+  }));
+
+  it('crews: the board ranks this week, and an invite link joins (2026-11-17)', fakeAsync(() => {
+    byLabel('Awards').click();
+    http.expectOne(r => r.url.endsWith('/find/score/profile')).flush({ success: true, profile: makeProfile({ weekTop: 10, badges: [
+      { id: 'seen-them-all', group: 'cards', title: 'Seen Them All', copy: 'x', icon: 'all-cards', state: 'earned', rarity: 2.5, rare: true },
+    ] }) });
+    tick();
+    harness.detectChanges();
+    http.expectOne(r => r.url.endsWith('/find/crews')).flush({ success: true, crews: [{
+      code: 'K7M3QX', name: 'Family', inviteUrl: 'https://find.16ahead.com/?crew=K7M3QX', isOwner: true, week: '2026-11-16',
+      members: [
+        { place: 1, nickname: 'Vikki', publicCode: 'AAAAAAAA', you: false, weekScore: 340, score: 2140, rank: 'Detective', streak: 18, dailyToday: 85 },
+        { place: 2, nickname: 'Ty', publicCode: 'BBBBBBBB', you: true, weekScore: 120, score: 412, rank: 'Tracker', streak: 4, dailyToday: null },
+      ] }] });
+    tick();
+    harness.detectChanges();
+    const screen = root().querySelector('.find-awards-screen')!;
+    const rows = Array.from(screen.querySelectorAll('.fcr__board li')).map(row => row.textContent?.replace(/\s+/g, ' ').trim());
+    expect(rows[0]).toContain('Vikki');
+    expect(rows[0]).toContain('Daily 85');
+    expect(rows[0]).toContain('340');
+    expect(rows[1]).toContain('(you)');
+    expect(screen.textContent).toContain('Top 10% this week');
+    expect(screen.textContent).toContain('Rare');
+    expect(screen.textContent).toContain('2.5% of Finders');
   }));
 
   it('shows the awards progress from the Awards tab', fakeAsync(() => {

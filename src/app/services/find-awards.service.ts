@@ -21,6 +21,9 @@ export interface FindAward {
   goal?: string;
   /** Shown above the title in the unlock overlay ("Award Unlocked", "New Rank"). */
   eyebrow?: string;
+  /** Share of active Finders holding it ("12% of Finders"), once enough people play. */
+  rarity?: number;
+  rare?: boolean;
 }
 
 export interface FindAwardView extends FindAward {
@@ -248,7 +251,7 @@ export class FindAwardsService {
   private toView ( badge: FindScoreBadge ): FindAwardView {
     const icon = ( KNOWN_ICONS as string[] ).includes( badge.icon ) ? badge.icon as FindAwardIcon : 'collector';
     const state: FindAwardState = badge.state === 'earned' || !badge.state ? 'unlocked' : badge.state === 'mystery' ? 'mystery' : 'locked';
-    return { id: badge.id, title: badge.title, copy: badge.copy, icon, threshold: 0, hidden: badge.hidden, group: badge.group, goal: badge.goal, state };
+    return { id: badge.id, title: badge.title, copy: badge.copy, icon, threshold: 0, hidden: badge.hidden, group: badge.group, goal: badge.goal, state, rarity: badge.rarity, rare: badge.rare };
   }
 
   private setProfile ( profile: FindScoreProfile | null ): void {

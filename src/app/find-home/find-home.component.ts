@@ -11,6 +11,7 @@ import { HeadlineFeedsService } from '../services/headline-feeds.service';
 import { environment } from '../../environments/environment';
 import { AwardBadgeComponent } from '../shared/award-badge/award-badge.component';
 import { FindDailyComponent } from './daily/find-daily.component';
+import { FindCrewsComponent } from './crews/find-crews.component';
 import { FindDailyService } from '../services/find-daily.service';
 import { PlatformMenuComponent } from '../shared/platform-menu/platform-menu.component';
 import { SeoService } from '../shared/seo.service';
@@ -71,7 +72,7 @@ function distanceMeters ( from: { latitude: number; longitude: number }, latitud
 @Component( {
   selector: 'app-find-home',
   standalone: true,
-  imports: [ FindEntityCardComponent, FindBusinessCardComponent, FindShopCardComponent, FindWordCardComponent, FindRegionCardComponent, FindMediaCardComponent, FindMusicCardComponent, FindCompanyCardComponent, MarketStripComponent, AlsoFromUsComponent, SiteFooterComponent, CommonModule, FormsModule, RouterModule, FindSwipeDirective, PlatformMenuComponent, AwardBadgeComponent, FindWelcomeComponent, FindDailyComponent],
+  imports: [ FindEntityCardComponent, FindBusinessCardComponent, FindShopCardComponent, FindWordCardComponent, FindRegionCardComponent, FindMediaCardComponent, FindMusicCardComponent, FindCompanyCardComponent, MarketStripComponent, AlsoFromUsComponent, SiteFooterComponent, CommonModule, FormsModule, RouterModule, FindSwipeDirective, PlatformMenuComponent, AwardBadgeComponent, FindWelcomeComponent, FindDailyComponent, FindCrewsComponent],
   templateUrl: './find-home.component.html',
   styleUrls: ['./find-home.component.css', './find-home.grid.css', './find-home.features.css', './find-home.score.css'],
   // The prerendered "/" always contains the home screen, but a `?query=` or
@@ -154,6 +155,9 @@ export class FindHomeComponent implements OnInit, OnDestroy {
   recoveryInput = '';
   recoveryMessage = '';
   scoreShareMessage = '';
+  /** A crew invite link this visit came from (?crew=<code>), before joining. */
+  crewInvite: { code: string; name: string; memberCount: number } | null = null;
+  crewInviteMessage = '';
   readonly year = new Date().getFullYear();
   readonly company = MENU_COMPANY;
   readonly appVersion = String( environment.VERSION || '' ).trim();
@@ -289,6 +293,8 @@ export class FindHomeComponent implements OnInit, OnDestroy {
       if ( params.get( 'score' ) === '1' ) this.setView( 'awards' );
       // A shared Daily Find result: "Can you beat it?"
       if ( params.get( 'daily' ) === '1' ) this.setView( 'daily' );
+      // A crew invite link: "Join Family on Find?"
+      this.showCrewInvite( params.get( 'crew' ) );
       this.selectedResultIndex = 0;
     } );
   }
@@ -817,7 +823,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
   async shareScore (): Promise<void> {
     const profile = this.scoreProfile;
     if ( !profile ) return;
-    const text = `${ profile.nickname } · ${ profile.rank.name } · ${ profile.score.toLocaleString( 'en-US' ) } on Find${ profile.streak.count > 1 ? ` · ${ profile.streak.count }-day streak` : '' }`;
+    const text = `${ profile.nickname } · ${ profile.rank.name } · ${ profile.score.toLocaleString( 'en-US' ) } on Find${ profile.streak.count > 1 ? ` · ${ profile.streak.count }-day streak` : '' }${ profile.weekTop ? ` · Top ${ profile.weekTop }% this week` : '' }`;
     const nav = typeof navigator !== 'undefined' ? navigator as Navigator & { canShare?: ( data: ShareData ) => boolean } : null;
     try {
       const file = await this.scoreCardFile( profile );
@@ -861,12 +867,33 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     ctx.fillStyle = '#c9d4de';
     ctx.font = font( 400, 44 );
     const topBadge = profile.badges.filter( badge => badge.state === 'earned' ).at( -1 );
-    const details = [ profile.streak.count > 1 ? `${ profile.streak.count }-day streak` : '', topBadge?.title || '' ].filter( Boolean ).join( ' · ' );
+    const details = [ profile.streak.count > 1 ? `${ profile.streak.count }-day streak` : '', profile.weekTop ? `Top ${ profile.weekTop }% this week` : '', topBadge?.title || '' ].filter( Boolean ).join( ' · ' );
     if ( details ) ctx.fillText( details, 96, 610, 888 );
     ctx.fillStyle = '#7f8b96';
     ctx.font = font( 400, 38 );
     ctx.fillText( 'See how you’d score · find.16ahead.com', 96, 960, 888 );
     return new Promise( ( resolve ) => canvas.toBlob( ( blob ) => resolve( blob ? new File( [ blob ], 'find-score.png', { type: 'image/png' } ) : null ), 'image/png' ) );
+  }
+
+  private showCrewInvite ( code: string | null ): void {
+    if ( !code || !/^[0-9A-Za-z]{4,8}$/.test( code ) ) return;
+    this.findExperienceService.previewCrew( code ).subscribe( {
+      next: ( response ) => { this.crewInvite = response.crew; },
+      error: () => { this.crewInvite = null; },
+    } );
+  }
+
+  joinInvitedCrew (): void {
+    const invite = this.crewInvite;
+    if ( !invite ) return;
+    this.findExperienceService.joinCrew( invite.code ).subscribe( {
+      next: ( response ) => {
+        this.crewInvite = null;
+        this.crewInviteMessage = `You joined “${ response.crew.name }”.`;
+        this.setView( 'awards' );
+      },
+      error: ( err ) => { this.crewInviteMessage = err?.error?.message || 'Couldn’t join that crew.'; },
+    } );
   }
 
   /** Daily Find: run the player's search in Find, counted for today's question. */

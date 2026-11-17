@@ -286,3 +286,54 @@
 .find-daily-banner strong {
   color: var(--tl-blue);
 }
+
+/* ── Crews: invite banner (home) and rarity on badges ── */
+.find-crew-invite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin: 14px auto 0;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--tl-blue) 16%, transparent);
+  color: var(--todd-panel-text);
+}
+
+.find-crew-invite span {
+  flex: 1 1 200px;
+}
+
+.find-crew-invite small {
+  display: block;
+  color: var(--todd-panel-subtext);
+}
+
+.find-crew-invite__join {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tl-blue);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.find-crew-invite__later {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--todd-panel-subtext);
+  cursor: pointer;
+}
+
+.find-awards-rare {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f5b041;
+  color: #1a1a1a;
+  font-size: 0.68rem;
+  font-weight: 800;
+}

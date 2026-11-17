@@ -31,6 +31,12 @@
       <span>{{ profile.rank.name }} · {{ profile.score | number }}</span>
       <span class="find-rank-chip__streak" *ngIf="profile.streak.count > 1"><i class="fa-solid fa-fire" aria-hidden="true"></i> {{ profile.streak.count }}</span>
     </button>
+    <div class="find-crew-invite" *ngIf="crewInvite as invite" role="dialog" aria-label="Crew invite">
+      <span>Join <strong>“{{ invite.name }}”</strong> on Find? <small>{{ invite.memberCount }} {{ invite.memberCount === 1 ? 'person' : 'people' }} · see who scores more this week</small></span>
+      <button type="button" class="find-crew-invite__join" (click)="joinInvitedCrew()">Join</button>
+      <button type="button" class="find-crew-invite__later" (click)="crewInvite = null">Not now</button>
+    </div>
+    <p class="find-error" *ngIf="crewInviteMessage && activeView === 'search'">{{ crewInviteMessage }}</p>
     <button type="button" class="find-daily-entry" (click)="setView('daily')">
       <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
       <span><strong>Daily Find</strong> <small>Today’s question for everyone</small></span>
@@ -696,7 +702,7 @@
         <ng-template #nicknameForm>
           <form class="find-score-card__nickname" (ngSubmit)="saveNickname()">
             <input name="nickname" [(ngModel)]="nicknameDraft" maxlength="20" placeholder="Your nickname" aria-label="Nickname" autocomplete="nickname" />
-            <button type="submit" [disabled]="nicknameDraft.trim().length < 3">Save</button>
+            <button type="submit" [disabled]="nicknameDraft.trim().length < 2">Save</button>
             <button type="button" class="find-score-card__link" (click)="editingNickname = false">Cancel</button>
           </form>
           <p class="find-score-card__error" *ngIf="nicknameError" role="alert">{{ nicknameError }}</p>
@@ -717,6 +723,7 @@
         <span><i class="fa-solid fa-fire" aria-hidden="true"></i> {{ profile.streak.count }}-day streak</span>
         <span>{{ profile.weekScore | number }} this week</span>
         <span>{{ awardsProgress.unlockedCount }} of {{ awardsProgress.totalCount }} badges</span>
+        <span *ngIf="profile.weekTop">Top {{ profile.weekTop }}% this week</span>
       </div>
       <button type="button" class="find-score-card__share" (click)="shareScore()"><i class="fa-solid fa-arrow-up-from-bracket" aria-hidden="true"></i> Share my score</button>
       <p class="find-score-card__hint" *ngIf="scoreShareMessage" role="status">{{ scoreShareMessage }}</p>
@@ -738,9 +745,12 @@
             {{ award.state === 'mystery' ? '— — —' : award.title }}
           </span>
           <span class="find-awards-grid__goal" *ngIf="award.state === 'locked' && award.goal">{{ award.goal }}</span>
+          <span class="find-awards-grid__goal" *ngIf="award.state === 'unlocked' && award.rarity !== undefined"><b class="find-awards-rare" *ngIf="award.rare">Rare</b> {{ award.rarity }}% of Finders</span>
         </div>
       </div>
     </section>
+    <p class="find-score-card__hint" *ngIf="crewInviteMessage" role="status">{{ crewInviteMessage }}</p>
+    <app-find-crews *ngIf="scoreProfile"></app-find-crews>
     <!-- Moving to a new phone or browser: a six-word code carries the score. -->
     <section class="find-score-recovery" *ngIf="scoreProfile">
       <h3>Moving to a new phone?</h3>
