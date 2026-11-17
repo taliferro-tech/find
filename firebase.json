@@ -24,6 +24,13 @@
         }
       },
       {
+        "source": "/p/**",
+        "function": {
+          "functionId": "api",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/guides",
         "function": {
           "functionId": "api",

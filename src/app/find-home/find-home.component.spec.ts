@@ -144,6 +144,7 @@ describe('FindHomeComponent', () => {
     localStorage.removeItem('find-history');
     localStorage.removeItem('find-awards-count');
     localStorage.removeItem('find-awards-unlocked');
+    localStorage.removeItem('find-score-profile');
     localStorage.removeItem('find.useLocation');
     localStorage.removeItem('find.hasWatches');
 
@@ -184,6 +185,13 @@ describe('FindHomeComponent', () => {
     // cancels the older question.
     for (const pending of http.match(r => r.url.endsWith('/find/entity'))) {
       if (!pending.cancelled) pending.flush({ entity: null });
+    }
+    // Opening Awards loads the Find Score profile; unless a test answers, the backend is away.
+    // (A failed local-emulator call retries the hosted API, so flush until none are left.)
+    for (let round = 0; round < 3; round++) {
+      for (const pending of http.match(r => r.url.includes('/find/score/'))) {
+        if (!pending.cancelled) pending.flush({ success: false }, { status: 503, statusText: 'Unavailable' });
+      }
     }
     http.verify();
   });
@@ -1380,6 +1388,111 @@ describe('FindHomeComponent', () => {
     expect(footer).not.toBeNull();
     expect(footer!.textContent).toContain('support@16ahead.com');
     expect(footer!.textContent).toContain('Privacy Policy');
+  }));
+
+  // --- Find Score (2026-11-17) ---
+
+  function makeProfile(overrides: Record<string, unknown> = {}) {
+    return {
+      nickname: 'Finder 4821', hasNickname: false, publicCode: 'AbCd1234', score: 412, weekScore: 60, weekKey: '2026-11-16',
+      rank: { name: 'Tracker', min: 250, level: 2, next: { name: 'Sleuth', min: 750, toGo: 338 } },
+      streak: { count: 4, best: 6, lastDay: '2026-11-17' }, searchCount: 31, imported: true, hasRecoveryCode: false,
+      shareUrl: 'https://find.16ahead.com/p/AbCd1234',
+      badges: [
+        { id: 'rebel', group: 'searches', title: 'The Rebel', copy: 'x', icon: 'rebel', goal: '1 search', state: 'earned', earnedAt: 1 },
+        { id: 'streak-7', group: 'streaks', title: 'Week Strong', copy: 'x', icon: 'streak', goal: '7-day streak', state: 'locked' },
+        { id: 'collector-words', group: 'cards', title: 'Wordsmith', copy: 'x', icon: 'collector', goal: 'Find this kind of card', state: 'locked' },
+      ],
+      ...overrides,
+    };
+  }
+
+  it('a scored search shows the points it earned and a new badge, and sends the device', fakeAsync(() => {
+    const score = {
+      points: 12, reasons: [], total: 12, weekScore: 12, rankUp: null, streak: 1,
+      rank: { name: 'Scout', min: 0, level: 1, next: { name: 'Tracker', min: 250, toGo: 238 } },
+      newBadges: [{ id: 'rebel', group: 'searches', title: 'The Rebel', copy: 'You go find it yourself.', icon: 'rebel', state: 'earned' }],
+    };
+    component.query = 'space needle';
+    harness.detectChanges();
+    submitButton().click();
+    tick();
+    const req = http.expectOne(r => r.url.endsWith('/find/search'));
+    expect(req.request.body.deviceId).toMatch(/^[A-Za-z0-9-]{16,64}$/);
+    req.flush(makeEntityResponse('space needle', { score } as Partial<FindSearchResponse>));
+    tick();
+    harness.detectChanges();
+    drainSummarize();
+
+    expect(component.pendingAwardUnlock?.title).toBe('The Rebel');
+    expect(root().querySelector('.find-award-unlock__title')?.textContent).toContain('The Rebel');
+    component.dismissAwardUnlock();
+    harness.detectChanges();
+    expect(root().querySelector('.find-footer__points')?.textContent).toContain('+12 points');
+    // The first scored search of a visit loads the whole profile.
+    http.expectOne(r => r.url.endsWith('/find/score/profile')).flush({ success: true, profile: makeProfile() });
+    tick();
+  }));
+
+  it('a new rank shows before a new badge', fakeAsync(() => {
+    const score = {
+      points: 25, reasons: [], total: 260, weekScore: 40, rankUp: 'Tracker', streak: 3,
+      rank: { name: 'Tracker', min: 250, level: 2, next: { name: 'Sleuth', min: 750, toGo: 490 } },
+      newBadges: [{ id: 'streak-3', group: 'streaks', title: 'Three in a Row', copy: 'x', icon: 'streak', state: 'earned' }],
+    };
+    runSearch('space needle', makeEntityResponse('space needle', { score } as Partial<FindSearchResponse>));
+    expect(component.pendingAwardUnlock?.eyebrow).toBe('New Rank');
+    expect(component.pendingAwardUnlock?.title).toBe('Tracker');
+    expect(component.pendingAwardUnlock?.copy).toContain('490 more to Sleuth');
+    http.expectOne(r => r.url.endsWith('/find/score/profile')).flush({ success: true, profile: makeProfile() });
+    tick();
+  }));
+
+  it('Awards shows the rank, points, streak and badges by kind, and saves a nickname', fakeAsync(() => {
+    byLabel('Awards').click();
+    http.expectOne(r => r.url.endsWith('/find/score/profile')).flush({ success: true, profile: makeProfile() });
+    tick();
+    harness.detectChanges();
+
+    const screen = root().querySelector('.find-awards-screen')!;
+    expect(screen.querySelector('.find-score-card__rank-name')?.textContent).toContain('Tracker');
+    expect(screen.querySelector('.find-score-card__points')?.textContent).toContain('412');
+    expect(screen.textContent).toContain('338 to Sleuth');
+    expect(screen.textContent).toContain('4-day streak');
+    expect(Array.from(screen.querySelectorAll('.find-awards-group__title')).map(el => el.textContent?.trim())).toEqual(['Searches', 'Streaks', 'Cards']);
+    expect(screen.textContent).toContain('7-day streak');
+
+    component.startNicknameEdit();
+    component.nicknameDraft = 'Vikki';
+    component.saveNickname();
+    const save = http.expectOne(r => r.url.endsWith('/find/score/nickname'));
+    expect(save.request.body).toEqual({ deviceId: jasmine.any(String), nickname: 'Vikki' });
+    save.flush({ success: true, profile: makeProfile({ nickname: 'Vikki', hasNickname: true }) });
+    tick();
+    harness.detectChanges();
+    expect(component.editingNickname).toBeFalse();
+    expect(screen.querySelector('.find-score-card__name strong')?.textContent).toContain('Vikki');
+
+    // The rank chip on the home screen comes from the same profile.
+    component.resetToSearch();
+    harness.detectChanges();
+    expect(root().querySelector('.find-rank-chip')?.textContent).toContain('Tracker · 412');
+  }));
+
+  it('a rejected nickname says why', fakeAsync(() => {
+    byLabel('Awards').click();
+    http.expectOne(r => r.url.endsWith('/find/score/profile')).flush({ success: true, profile: makeProfile() });
+    tick();
+    component.startNicknameEdit();
+    component.nicknameDraft = 'Find Admin';
+    component.saveNickname();
+    // Tests run on localhost, so the local emulator is asked first and the hosted API after it.
+    for (let round = 0; round < 2; round++) {
+      http.expectOne(r => r.url.endsWith('/find/score/nickname')).flush({ success: false, message: 'Please pick a different nickname.' }, { status: 400, statusText: 'Bad Request' });
+      tick();
+    }
+    expect(component.nicknameError).toBe('Please pick a different nickname.');
+    expect(component.editingNickname).toBeTrue();
   }));
 
   it('shows the awards progress from the Awards tab', fakeAsync(() => {

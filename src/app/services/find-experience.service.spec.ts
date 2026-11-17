@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpEventType, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { FindExperienceService, FindSearchEvent } from './find-experience.service';
+import { FindAwardsService } from './find-awards.service';
 
 describe('FindExperienceService', () => {
   let service: FindExperienceService;
@@ -34,6 +35,7 @@ describe('FindExperienceService', () => {
       maxResults: 1,
       timeZone: jasmine.any(String),
       features: ['instant', 'units'],
+      deviceId: jasmine.any(String),
     });
     request.flush({ success: true, query: 'weather 98106', normalizedQuery: 'weather 98106', queryType: 'weather', results: [], selectedIndex: 0 });
   });
@@ -48,6 +50,7 @@ describe('FindExperienceService', () => {
       maxResults: 16,
       timeZone: jasmine.any(String),
       features: ['instant', 'units'],
+      deviceId: jasmine.any(String),
     });
     request.flush({ success: true, query: 'weather tomorrow', normalizedQuery: 'weather tomorrow', queryType: 'weather', results: [], selectedIndex: 0 });
   });
@@ -64,6 +67,7 @@ describe('FindExperienceService', () => {
       maxResults: 16,
       timeZone: jasmine.any(String),
       features: ['instant', 'units'],
+      deviceId: jasmine.any(String),
     });
     request.flush({ success: true, query: 'places to eat near me', normalizedQuery: 'places to eat near me', queryType: 'local', results: [], selectedIndex: 0 });
   });
@@ -78,6 +82,7 @@ describe('FindExperienceService', () => {
       maxResults: 16,
       timeZone: jasmine.any(String),
       features: ['instant', 'units'],
+      deviceId: jasmine.any(String),
     });
     request.flush({ success: true, query: 'places to eat near me', normalizedQuery: 'places to eat near me', queryType: 'entity', results: [], selectedIndex: 0 });
   });
@@ -171,6 +176,28 @@ describe('FindExperienceService', () => {
       service.searchStream({ query: 'acme' }).subscribe({ error: (err) => (failed = err.message) });
       http.expectOne(item => item.url.endsWith('/find/search')).flush(line({ type: 'stage', stage: 'planning' }) + line({ type: 'error', message: 'Find search failed' }));
       expect(failed).toBe('Find search failed');
+    });
+  });
+
+  describe('Find Score (2026-11-17)', () => {
+    it('hands the old on-device count to the backend once, then keeps the profile', () => {
+      localStorage.setItem('find-awards-count', '12');
+      localStorage.setItem('find-awards-unlocked', JSON.stringify({ rebel: { title: 'The Rebel', copy: 'x', icon: 'rebel', unlockedAt: '' } }));
+      localStorage.removeItem('find-score-profile');
+      const awards = TestBed.inject(FindAwardsService);
+      let loaded: unknown = null;
+      awards.refresh().subscribe(profile => (loaded = profile));
+      http.expectOne(item => item.url.endsWith('/find/score/profile')).flush({ success: true, profile: { imported: false, badges: [], rank: { name: 'Scout', min: 0, level: 1, next: null }, streak: { count: 0, best: 0, lastDay: '' } } });
+      const importReq = http.expectOne(item => item.url.endsWith('/find/score/import'));
+      expect(importReq.request.body).toEqual(jasmine.objectContaining({ count: 12, badges: [{ id: 'rebel', title: 'The Rebel', icon: 'rebel' }] }));
+      importReq.flush({ success: true, profile: { imported: true, score: 24, badges: [], rank: { name: 'Scout', min: 0, level: 1, next: null }, streak: { count: 0, best: 0, lastDay: '' } }, award: {} });
+      expect((loaded as any).score).toBe(24);
+      expect(awards.profile?.score).toBe(24);
+      // After the import the old count stops.
+      expect(awards.recordSearch()).toBeNull();
+      localStorage.removeItem('find-awards-count');
+      localStorage.removeItem('find-awards-unlocked');
+      localStorage.removeItem('find-score-profile');
     });
   });
 });

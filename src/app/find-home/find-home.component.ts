@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { FindSwipeDirective } from '../directives/find-swipe.directive';
-import { FindAward, FindAwardView, FindAwardsProgress, FindAwardsService } from '../services/find-awards.service';
-import { FindBusinessHours, FindBusinessHoursDay, FindBusinessLocation, FindEntity, FindFollowupResponse, FindInstantAnswer, FindWatch, FindConversionCategory, FindConversionResult, FindExperienceService, FindFeedbackRating, FindMovieRatings, FindRankedResult, FindSearchResponse, FindSourceType, FindWeatherForecastDay } from '../services/find-experience.service';
+import { FindAward, FindAwardGroup, FindAwardView, FindAwardsProgress, FindAwardsService } from '../services/find-awards.service';
+import { FindBusinessHours, FindBusinessHoursDay, FindBusinessLocation, FindEntity, FindFollowupResponse, FindInstantAnswer, FindWatch, FindConversionCategory, FindConversionResult, FindExperienceService, FindFeedbackRating, FindMovieRatings, FindRankedResult, FindScoreAward, FindSearchResponse, FindSourceType, FindWeatherForecastDay } from '../services/find-experience.service';
 import { FindGyroscopeService, GyroTilt } from '../services/find-gyroscope.service';
 import { HeadlineFeedsService } from '../services/headline-feeds.service';
 import { environment } from '../../environments/environment';
@@ -71,7 +71,7 @@ function distanceMeters ( from: { latitude: number; longitude: number }, latitud
   standalone: true,
   imports: [ FindEntityCardComponent, FindBusinessCardComponent, FindShopCardComponent, FindWordCardComponent, FindRegionCardComponent, FindMediaCardComponent, FindMusicCardComponent, FindCompanyCardComponent, MarketStripComponent, AlsoFromUsComponent, SiteFooterComponent, CommonModule, FormsModule, RouterModule, FindSwipeDirective, PlatformMenuComponent, AwardBadgeComponent, FindWelcomeComponent],
   templateUrl: './find-home.component.html',
-  styleUrls: ['./find-home.component.css', './find-home.grid.css', './find-home.features.css'],
+  styleUrls: ['./find-home.component.css', './find-home.grid.css', './find-home.features.css', './find-home.score.css'],
   // The prerendered "/" always contains the home screen, but a `?query=` or
   // `?q=` link (e.g. a Firefox search shortcut) boots straight into the
   // result view. Hydration never removed the prerendered home screen, so both
@@ -142,6 +142,16 @@ export class FindHomeComponent implements OnInit, OnDestroy {
 
   searchHistory: string[] = [];
   pendingAwardUnlock: FindAward | null = null;
+  /** What the shown result's search earned (Find Score). */
+  resultAward: FindScoreAward | null = null;
+  editingNickname = false;
+  nicknameDraft = '';
+  nicknameError = '';
+  recoveryOpen = false;
+  recoveryCode = '';
+  recoveryInput = '';
+  recoveryMessage = '';
+  scoreShareMessage = '';
   readonly year = new Date().getFullYear();
   readonly company = MENU_COMPANY;
   readonly appVersion = String( environment.VERSION || '' ).trim();
@@ -250,6 +260,8 @@ export class FindHomeComponent implements OnInit, OnDestroy {
       const nextContext = String( params.get( 'context' ) || '' ).trim();
       const requestedView = params.get( 'view' );
       this.isForwardedQuery = params.has( 'q' ) && !params.has( 'query' );
+      // Find Score: someone opened a find (or a score) this person shared.
+      this.creditShareOpen( params.get( 'ref' ) );
       this.seo.setIndexable( !next );
       if ( next ) {
         this.query = next;
@@ -270,6 +282,8 @@ export class FindHomeComponent implements OnInit, OnDestroy {
       if ( requestedView === 'history' || requestedView === 'info' ) {
         this.activeView = requestedView;
       }
+      // A friend's score link (find.16ahead.com/p/<code>): "See how you'd score".
+      if ( params.get( 'score' ) === '1' ) this.setView( 'awards' );
       this.selectedResultIndex = 0;
     } );
   }
@@ -663,6 +677,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
       return;
     }
     this.activeView = view;
+    if ( view === 'awards' ) this.awardsService.refresh().subscribe();
   }
 
   get isResultView (): boolean {
@@ -736,6 +751,126 @@ export class FindHomeComponent implements OnInit, OnDestroy {
       volume: [ { value: 'gal', label: 'US Gallons' }, { value: 'l', label: 'Liters' } ],
     };
     return options[String( this.conversionCategory || '' )] || [];
+  }
+
+  get awardGroups (): FindAwardGroup[] {
+    return this.awardsService.groups;
+  }
+
+  get scoreProfile () {
+    return this.awardsService.profile;
+  }
+
+  get rankPercent (): number {
+    return this.awardsService.rankPercent;
+  }
+
+  /** "+12 points" under a result, when that search earned some. */
+  get resultPoints (): number {
+    return this.resultAward?.points || 0;
+  }
+
+  startNicknameEdit (): void {
+    this.nicknameDraft = this.scoreProfile?.hasNickname ? this.scoreProfile.nickname : '';
+    this.nicknameError = '';
+    this.editingNickname = true;
+  }
+
+  saveNickname (): void {
+    const name = this.nicknameDraft.trim();
+    if ( !name ) return;
+    this.nicknameError = '';
+    this.awardsService.setNickname( name ).subscribe( {
+      next: () => { this.editingNickname = false; },
+      error: ( err ) => { this.nicknameError = err?.error?.message || 'That nickname didn’t save. Try again.'; },
+    } );
+  }
+
+  showRecoveryCode (): void {
+    this.recoveryMessage = '';
+    this.awardsService.recoveryCode().subscribe( {
+      next: ( code ) => { this.recoveryCode = code; },
+      error: () => { this.recoveryMessage = 'Couldn’t load your code. Try again.'; },
+    } );
+  }
+
+  recoverScore (): void {
+    const code = this.recoveryInput.trim();
+    if ( !code ) return;
+    this.recoveryMessage = '';
+    this.awardsService.recover( code ).subscribe( {
+      next: ( profile ) => {
+        this.recoveryInput = '';
+        this.recoveryOpen = false;
+        this.recoveryMessage = `Welcome back, ${ profile.nickname }.`;
+      },
+      error: ( err ) => { this.recoveryMessage = err?.error?.message || 'That code didn’t match a score.'; },
+    } );
+  }
+
+  /** "Share my score": a square card image plus the score link. */
+  async shareScore (): Promise<void> {
+    const profile = this.scoreProfile;
+    if ( !profile ) return;
+    const text = `${ profile.nickname } · ${ profile.rank.name } · ${ profile.score.toLocaleString( 'en-US' ) } on Find${ profile.streak.count > 1 ? ` · ${ profile.streak.count }-day streak` : '' }`;
+    const nav = typeof navigator !== 'undefined' ? navigator as Navigator & { canShare?: ( data: ShareData ) => boolean } : null;
+    try {
+      const file = await this.scoreCardFile( profile );
+      if ( file && nav?.canShare?.( { files: [ file ] } ) ) {
+        await nav.share( { files: [ file ], title: 'My Find Score', text: `${ text }\n${ profile.shareUrl }` } );
+        return;
+      }
+      if ( nav?.share ) {
+        await nav.share( { title: 'My Find Score', text, url: profile.shareUrl } );
+        return;
+      }
+      await nav?.clipboard?.writeText( `${ text } ${ profile.shareUrl }` );
+      this.scoreShareMessage = 'Link copied.';
+    } catch {
+      // The person closed the share sheet.
+    }
+  }
+
+  private scoreCardFile ( profile: NonNullable<FindAwardsService['profile']> ): Promise<File | null> {
+    if ( typeof document === 'undefined' ) return Promise.resolve( null );
+    const canvas = document.createElement( 'canvas' );
+    canvas.width = 1080;
+    canvas.height = 1080;
+    const ctx = canvas.getContext( '2d' );
+    if ( !ctx ) return Promise.resolve( null );
+    const background = ctx.createLinearGradient( 0, 0, 1080, 1080 );
+    background.addColorStop( 0, '#0b0f14' );
+    background.addColorStop( 1, '#14263f' );
+    ctx.fillStyle = background;
+    ctx.fillRect( 0, 0, 1080, 1080 );
+    const font = ( weight: number, size: number ) => `${ weight } ${ size }px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+    ctx.fillStyle = '#7fb3d8';
+    ctx.font = font( 700, 44 );
+    ctx.fillText( 'Find', 96, 150 );
+    ctx.fillStyle = '#ffffff';
+    ctx.font = font( 700, 96 );
+    ctx.fillText( profile.nickname, 96, 430, 888 );
+    ctx.fillStyle = '#a9e0ff';
+    ctx.font = font( 700, 64 );
+    ctx.fillText( `${ profile.rank.name } · ${ profile.score.toLocaleString( 'en-US' ) }`, 96, 530, 888 );
+    ctx.fillStyle = '#c9d4de';
+    ctx.font = font( 400, 44 );
+    const topBadge = profile.badges.filter( badge => badge.state === 'earned' ).at( -1 );
+    const details = [ profile.streak.count > 1 ? `${ profile.streak.count }-day streak` : '', topBadge?.title || '' ].filter( Boolean ).join( ' · ' );
+    if ( details ) ctx.fillText( details, 96, 610, 888 );
+    ctx.fillStyle = '#7f8b96';
+    ctx.font = font( 400, 38 );
+    ctx.fillText( 'See how you’d score · find.16ahead.com', 96, 960, 888 );
+    return new Promise( ( resolve ) => canvas.toBlob( ( blob ) => resolve( blob ? new File( [ blob ], 'find-score.png', { type: 'image/png' } ) : null ), 'image/png' ) );
+  }
+
+  /** Credits whoever shared the link this visit came from, once per link per browser. */
+  private creditShareOpen ( ref: string | null ): void {
+    if ( !ref || !/^[0-9A-Za-z]{8}$/.test( ref ) ) return;
+    const key = `find-ref-${ ref }`;
+    if ( this.readFlag( key ) ) return;
+    this.writeFlag( key, true );
+    this.findExperienceService.shareOpened( ref ).subscribe( { error: () => { } } );
   }
 
   get awards (): FindAwardView[] {
@@ -1171,6 +1306,8 @@ export class FindHomeComponent implements OnInit, OnDestroy {
 
   // --- Compact feedback row ---
 
+  feedbackPoints = 0;
+
   get feedbackSent (): boolean {
     return !!this.feedbackSentFor && this.feedbackSentFor === this.feedbackKey;
   }
@@ -1182,7 +1319,14 @@ export class FindHomeComponent implements OnInit, OnDestroy {
       rating,
       query: String( this.result?.query || this.query || '' ).trim() || null,
       queryType: this.result?.queryType || null,
-    } ).subscribe( { error: () => { } } );
+    } ).subscribe( {
+      next: ( response ) => {
+        this.feedbackPoints = response?.score?.points || 0;
+        const unlock = this.awardsService.applyAward( response?.score );
+        if ( unlock && !this.pendingAwardUnlock ) this.pendingAwardUnlock = unlock;
+      },
+      error: () => { },
+    } );
   }
 
   private get feedbackKey (): string {
@@ -1877,6 +2021,9 @@ export class FindHomeComponent implements OnInit, OnDestroy {
       this.entitySub = this.findExperienceService.detectEntity( query ).subscribe( {
         next: ( response ) => {
           const entity = response?.entity ?? null;
+          // A kind of card this player hadn't seen before earns a badge.
+          const unlock = this.awardsService.applyAward( response?.score );
+          if ( unlock && !this.pendingAwardUnlock ) this.pendingAwardUnlock = unlock;
           if ( searchId !== this.searchId || !entity ) return;
           if ( !this.isBusinessEntity( entity ) ) {
             this.entity = entity;
@@ -2054,7 +2201,10 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     this.highlightedPill = '';
     this.activeView = 'result';
     this.saveToHistory( query );
-    const newlyUnlocked = this.awardsService.recordSearch();
+    // Find Score: the backend's points when it scored the search, else the
+    // old on-device count.
+    this.resultAward = response?.score || null;
+    const newlyUnlocked = response?.score ? this.awardsService.applyAward( response.score ) : this.awardsService.recordSearch();
     if ( newlyUnlocked ) this.pendingAwardUnlock = newlyUnlocked;
     const isLocalResult = response?.queryType === 'local';
     const localHasRealWebsite = isLocalResult && !this.isGoogleMapsUrl( response.results?.[0]?.url );
