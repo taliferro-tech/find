@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpEventType, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, mergeMap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 export type FindQueryType = 'entity' | 'question' | 'person' | 'weather' | 'conversion' | 'instant' | 'local' | 'movie' | 'sports' | 'news';
@@ -539,6 +539,15 @@ export interface FindSearchResponse {
   };
 }
 
+/**
+ * What a streamed search sends while it works (results first): the stage it's
+ * on, the web search's cards before any page is checked, then the full response.
+ */
+export type FindSearchEvent =
+  | { type: 'stage'; stage: 'planning' | 'checking'; pageCount?: number }
+  | { type: 'results'; response: FindSearchResponse }
+  | { type: 'final'; response: FindSearchResponse };
+
 @Injectable( {
   providedIn: 'root'
 } )
@@ -556,6 +565,19 @@ export class FindExperienceService {
     longitude?: number | null;
   } ): Observable<FindSearchResponse> {
     const headers = new HttpHeaders().set( 'Authorization', `Bearer ${environment.apiKey}` );
+    const body = this.searchBody( payload );
+
+    return this.postWithLocalFallback<FindSearchResponse>( '/find/search', body, { headers } )
+      .pipe( map( response => this.applyLocalConversionFallback( response, body.query ) ) );
+  }
+
+  private searchBody ( payload: {
+    query: string;
+    context?: string | null;
+    maxResults?: number;
+    latitude?: number | null;
+    longitude?: number | null;
+  } ) {
     const postalCode = this.extractPostalCode( payload?.query );
     const hasCoordinates = Number.isFinite( payload?.latitude ) && Number.isFinite( payload?.longitude );
     const body = {
@@ -568,9 +590,64 @@ export class FindExperienceService {
       // Answer types this app can show; the backend leaves them out for apps that can't.
       features: [ 'instant', 'units' ]
     };
+    return body;
+  }
 
-    return this.postWithLocalFallback<FindSearchResponse>( '/find/search', body, { headers } )
-      .pipe( map( response => this.applyLocalConversionFallback( response, body.query ) ) );
+  /**
+   * The same search, results first: emits the stage, the early cards and then
+   * `final` (the same response `search` returns), and completes. A backend
+   * or proxy that sends one plain JSON reply just produces `final`.
+   */
+  searchStream ( payload: Parameters<FindExperienceService['search']>[0] ): Observable<FindSearchEvent> {
+    const headers = new HttpHeaders().set( 'Authorization', `Bearer ${environment.apiKey}` );
+    const body = { ...this.searchBody( payload ), stream: true };
+    let consumed = 0;
+    const take = ( text: string, complete: boolean ): FindSearchEvent[] => {
+      const end = complete ? text.length : text.lastIndexOf( '\n' ) + 1;
+      if ( end <= consumed ) return [];
+      const chunk = text.slice( consumed, end );
+      consumed = end;
+      return chunk.split( '\n' ).map( line => line.trim() ).filter( Boolean )
+        .map( line => this.toSearchEvent( line, body.query ) )
+        .filter( ( event ): event is FindSearchEvent => !!event );
+    };
+    return this.postEventsWithLocalFallback( '/find/search', body, headers ).pipe(
+      mergeMap( ( event: HttpEvent<string> ) => {
+        if ( event.type === HttpEventType.DownloadProgress ) return take( ( event as { partialText?: string } ).partialText || '', false );
+        if ( event.type === HttpEventType.Response ) {
+          const text = event.body || '';
+          // A whole reply that arrived at once as one JSON document (not lines).
+          if ( consumed === 0 && !text.trim().startsWith( '{"type"' ) ) {
+            consumed = text.length;
+            const single = this.toSearchEvent( text.replace( /\n/g, ' ' ), body.query );
+            return single ? [ single ] : [];
+          }
+          return take( text, true );
+        }
+        return [];
+      } ),
+    );
+  }
+
+  private toSearchEvent ( line: string, query: string ): FindSearchEvent | null {
+    let message: any;
+    try {
+      message = JSON.parse( line );
+    } catch {
+      return null;
+    }
+    if ( message?.type === 'stage' ) return { type: 'stage', stage: message.stage, pageCount: message.pageCount };
+    if ( message?.type === 'results' ) {
+      return { type: 'results', response: {
+        success: true, query: message.query || query, normalizedQuery: message.query || query,
+        queryType: message.queryType, shoppingIntent: message.shoppingIntent,
+        results: Array.isArray( message.results ) ? message.results : [], selectedIndex: 0, answer: null,
+      } };
+    }
+    if ( message?.type === 'error' ) throw new Error( message.message || 'Find could not produce a result right now.' );
+    // `final`, or a plain JSON reply from a backend that didn't stream.
+    const response = message?.type === 'final' ? message.response : message;
+    return { type: 'final', response: this.applyLocalConversionFallback( response, query ) };
   }
 
   /** Is this query one thing (an NFL team, a store, a restaurant, a local service)? Answers before the search finishes. */
@@ -666,6 +743,13 @@ export class FindExperienceService {
 
     return this.http.post<T>( `${this.localApiRoot}${path}`, body, options )
       .pipe( catchError( () => hostedRequest() ) );
+  }
+
+  /** A text request that reports what has arrived so far (for streamed replies). */
+  private postEventsWithLocalFallback ( path: string, body: unknown, headers: HttpHeaders ): Observable<HttpEvent<string>> {
+    const request = ( root: string ) => this.http.post( `${root}${path}`, body, { headers, observe: 'events', reportProgress: true, responseType: 'text' } );
+    if ( !this.localApiRoot ) return request( this.apiRoot );
+    return request( this.localApiRoot ).pipe( catchError( () => request( this.apiRoot ) ) );
   }
 
   private buildLocalApiRoot (): string | null {

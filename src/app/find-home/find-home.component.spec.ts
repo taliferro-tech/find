@@ -1,6 +1,6 @@
 import { fakeAsync, flush, flushMicrotasks, tick, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpEventType, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { FindHomeComponent } from './find-home.component';
@@ -157,6 +157,15 @@ describe('FindHomeComponent', () => {
 
     http = TestBed.inject(HttpTestingController);
 
+    // Results first: the page's search is a streamed text request. Tests keep
+    // answering it with a plain response object, which the page reads the
+    // same way it reads a backend that didn't stream (one JSON reply).
+    const flushAsSent = TestRequest.prototype.flush;
+    spyOn(TestRequest.prototype, 'flush').and.callFake(function (this: TestRequest, body: any, opts?: any) {
+      const asText = this.request.responseType === 'text' && body !== null && typeof body === 'object';
+      return flushAsSent.call(this, asText ? JSON.stringify(body) : body, opts);
+    });
+
     // Browser-fetched headline feeds (ESPN): none unless a test says so.
     fetchSpy = spyOn(window, 'fetch').and.callFake(async () => ({ ok: false, status: 404, text: async () => '' }) as Response);
 
@@ -180,6 +189,46 @@ describe('FindHomeComponent', () => {
   });
 
   // --- Single-item results ---
+
+  it('results first: cards show while pages are checked, and the card being read stays in front (2026-11-17)', fakeAsync(() => {
+    const line = (message: unknown) => JSON.stringify(message) + '\n';
+    const first = makeResult({ url: 'https://acme.example/', title: 'Acme Widgets', summary: 'Widgets made in Ohio.' });
+    const second = makeResult({ url: 'https://wiki.example/acme', title: 'Acme history', summary: 'History of Acme.' });
+    component.query = 'acme widgets';
+    harness.detectChanges();
+    submitButton().click();
+    tick();
+    const req = http.expectOne(r => r.url.endsWith('/find/search'));
+    const early = line({ type: 'stage', stage: 'planning' })
+      + line({ type: 'results', query: 'acme widgets', queryType: 'entity', results: [first, second] })
+      + line({ type: 'stage', stage: 'checking', pageCount: 2 });
+    req.event({ type: HttpEventType.DownloadProgress, loaded: early.length, partialText: early } as any);
+    tick();
+    harness.detectChanges();
+
+    const page: HTMLElement = harness.routeNativeElement!;
+    expect(component.isLoading).toBeFalse();
+    expect(component.isRefining).toBeTrue();
+    expect(page.querySelector('.find-refining')?.textContent).toContain('Checking 2 pages');
+    expect(page.querySelector('.find-footer')).toBeNull();
+    expect(page.textContent).toContain('Acme Widgets');
+
+    component.onNextResult();
+    expect(component.currentCard?.url).toBe('https://wiki.example/acme');
+
+    // The full response adds a result in front; the reader stays on the history page.
+    const official = makeResult({ url: 'https://acme.example/about', title: 'About Acme' });
+    const final = makeEntityResponse('acme widgets', { results: [official, { ...first, imageUrl: 'https://acme.example/og.png' }, second] });
+    req.flush(early + line({ type: 'final', response: final }));
+    tick();
+    harness.detectChanges();
+    drainSummarize();
+
+    expect(component.isRefining).toBeFalse();
+    expect(component.currentCard?.url).toBe('https://wiki.example/acme');
+    expect(component.resultIndex).toBe(2);
+    expect(page.querySelector('.find-refining')).toBeNull();
+  }));
 
   it('a web address inside a summary stays on one line (2026-11-01)', () => {
     const summary = 'AETHER Apparel is a brand that offers high-quality clothing and accessories designed for outdoor adventures and everyday wear. Their collections include insulated and non-insulated jackets, mid and base layers, and a variety of apparel for both men and women. You can explore their latest offerings and shop directly on their website at https://aetherapparel.com/. New styles arrive every season.';

@@ -1502,6 +1502,25 @@
   text-decoration: underline;
 }
 
+/* ── Results first: still checking the pages under the cards ── */
+.find-refining {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.find-refining .find-spinner {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+}
+
 /* ── RESULT FRAME: footer (one-row feedback + meta) ─────────── */
 .find-footer {
   display: flex;
