@@ -1,0 +1,459 @@
+/* How-to card (design_handoff_find_howto_video), on top of
+   find-entity-card.component.css. Desktop: two columns (1.35fr | 1fr);
+   below 1000px one column in the phone order from the handoff. Colours are
+   Find's shared tokens, so light and dark both work. */
+.hc {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 32px 40px 0;
+}
+
+.hc-pills .ec-chip i {
+  font-size: 0.8em;
+  margin-right: 2px;
+}
+
+.hc-titlerow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.hc-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hc-title {
+  overflow-wrap: anywhere;
+}
+
+.hc-meta {
+  color: var(--muted);
+}
+
+.hc-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hc-fact {
+  padding: 8px 16px;
+  border: 2px solid var(--surface2);
+  border-radius: 999px;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.hc-missing {
+  color: var(--muted);
+}
+
+.hc-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
+}
+
+.hc-col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.hc-summary {
+  border-radius: 28px;
+  padding: 20px 24px;
+}
+
+/* Video */
+.hc-video {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 28px;
+  overflow: hidden;
+  background: #000;
+}
+
+.hc-video--skel {
+  background: var(--surface);
+}
+
+.hc-video__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+}
+
+.hc-video__poster {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: #fff;
+  text-align: left;
+}
+
+.hc-video__shade {
+  position: absolute;
+  inset: 45% 0 0;
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.72));
+}
+
+.hc-video__duration {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.75);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.hc-video__play {
+  position: absolute;
+  left: 22px;
+  bottom: 22px;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  font-size: 22px;
+  transition: transform 0.15s ease;
+}
+
+.hc-video__poster:hover .hc-video__play,
+.hc-video__poster:focus-visible .hc-video__play {
+  transform: scale(1.06);
+}
+
+.hc-video__poster:focus-visible {
+  outline: 3px solid var(--tl-blue);
+  outline-offset: -3px;
+  border-radius: 28px;
+}
+
+.hc-video__caption {
+  position: absolute;
+  left: 104px;
+  right: 22px;
+  bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hc-video__caption strong {
+  font-size: 22px;
+  line-height: 1.2;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+}
+
+.hc-video__caption span {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* On a phone the title sits under the frame instead. */
+.hc-video__below {
+  display: none;
+  margin: -8px 0 0;
+  font-weight: 700;
+}
+
+.hc-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hc-chapters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.hc-chapters__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hc-chapter {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.hc-chapter strong {
+  color: var(--text);
+}
+
+.hc-chapter--on {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.hc-chapter--on strong {
+  color: var(--bg);
+}
+
+.hc-attrib {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Steps */
+.hc-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 22px;
+  border: 2px solid var(--surface2);
+  border-radius: 24px;
+}
+
+.hc-steps ol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hc-step {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.hc-step__dot {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--tl-blue-deep, #2f6bff);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.hc-step__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hc-step__title {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  text-align: left;
+  cursor: default;
+}
+
+.hc-step__detail {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.hc-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tl-blue) 16%, transparent);
+  color: var(--tl-blue-mid, var(--tl-blue));
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.hc-stamp i {
+  font-size: 0.75em;
+}
+
+/* Ingredients / what you need, and the no-video note */
+.hc-things,
+.hc-novideo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px;
+  border-radius: 24px;
+  background: var(--surface);
+}
+
+.hc-things ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hc-things li {
+  position: relative;
+  padding-left: 16px;
+  line-height: 1.4;
+}
+
+.hc-things li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5dbb4f;
+}
+
+.hc-novideo p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.hc-more-videos {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--tl-blue-mid, var(--tl-blue));
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.hc-more-videos i {
+  color: #ff0033;
+  font-size: 20px;
+}
+
+.hc-more-videos:hover {
+  text-decoration: underline;
+}
+
+/* Phone order: pills, title, summary, video (title below), chapters
+   scrolling, steps (tap for detail), ingredients. */
+@media (max-width: 999px) {
+  .hc {
+    padding: 20px 16px 0;
+    gap: 18px;
+  }
+
+  .hc-title {
+    font-size: 34px;
+  }
+
+  .hc-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .hc-video {
+    border-radius: 20px;
+  }
+
+  .hc-video__caption {
+    display: none;
+  }
+
+  .hc-video__play {
+    left: 50%;
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+  }
+
+  .hc-video__poster:hover .hc-video__play {
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+
+  .hc-video__below {
+    display: block;
+  }
+
+  .hc-attrib {
+    display: none;
+  }
+
+  .hc-chapters {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .hc-chapters__row {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .hc-step__title {
+    cursor: pointer;
+  }
+
+  .hc-step__detail {
+    display: none;
+  }
+
+  .hc-step--open .hc-step__detail {
+    display: block;
+  }
+
+  .hc-things ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-video__play {
+    transition: none;
+  }
+}

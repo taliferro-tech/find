@@ -72,6 +72,13 @@
         <div class="find-pager__center"><span class="find-pager__label">{{ entity.label }}</span></div>
         <span class="find-pager__spacer" aria-hidden="true"></span>
       </nav>
+      <!-- How-to answers with one video (design_handoff_find_howto_video). -->
+      <ng-container *ngIf="entity.type === 'howto'; else wordCard">
+        @defer (on immediate) {
+          <app-find-howto-card [entity]="entity" [query]="result?.query || query" [moreCount]="entityMoreCount" (moreResults)="showAllResults()"></app-find-howto-card>
+        }
+      </ng-container>
+      <ng-template #wordCard>
       <ng-container *ngIf="entity.type === 'word'; else teamCard">
         <!-- Loaded when first needed, to keep it out of the first download. -->
         @defer (on immediate) {
@@ -79,7 +86,13 @@
         }
       </ng-container>
       <ng-template #teamCard>
-      <app-find-entity-card *ngIf="entity.type === 'sports'; else businessCard" [entity]="entity" [query]="result?.query || query" [moreCount]="entityMoreCount" (moreResults)="showAllResults()"></app-find-entity-card>
+      <ng-container *ngIf="entity.type === 'sports'; else businessCard">
+        <app-find-entity-card [entity]="entity" [query]="result?.query || query" [moreCount]="entityMoreCount" (moreResults)="showAllResults()"></app-find-entity-card>
+        <!-- Latest videos behind curtains in the team's colors (design_handoff_find_team_videos). -->
+        @defer (on immediate) {
+          <app-find-team-videos [entity]="entity"></app-find-team-videos>
+        }
+      </ng-container>
       <ng-template #businessCard>
         <app-find-shop-card *ngIf="entity.type === 'shop'; else companyCard" [entity]="entity" [query]="result?.query || query" [moreCount]="entityMoreCount" (moreResults)="showAllResults()" (watched)="onEntityWatched($event)"></app-find-shop-card>
         <ng-template #companyCard>
@@ -102,6 +115,7 @@
         <ng-template #placeCard>
           <app-find-business-card [entity]="entity" [query]="result?.query || query" [moreCount]="entityMoreCount" [position]="entityPosition" (moreResults)="showAllResults()" (watched)="onEntityWatched($event)"></app-find-business-card>
         </ng-template>
+      </ng-template>
       </ng-template>
       </ng-template>
       <footer class="find-footer">

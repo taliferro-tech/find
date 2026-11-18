@@ -1,0 +1,410 @@
+/* Team video row with movie curtains (design_handoff_find_team_videos v2).
+   Curtain colours come from --c1/--c2/--c3/--gold, set per team. */
+:host {
+  display: block;
+  color: var(--text);
+}
+
+h2, h3, p {
+  margin: 0;
+}
+
+.tv {
+  padding: 28px 40px 0;
+}
+
+.tv-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 760px) minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+
+.tv-stagecol {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tv-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.tv-side h2,
+.tv-head h2 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.tv-side p,
+.tv-head p,
+.tv-hint {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.tv-more {
+  color: var(--tl-blue-mid, var(--tl-blue));
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.tv-more:hover {
+  text-decoration: underline;
+}
+
+.tv-head--phone,
+.tv-hint--phone,
+.tv-more--phone {
+  display: none;
+}
+
+/* ── The stage ── */
+.tv-stage {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  border: 0;
+  border-radius: 22px;
+  overflow: hidden;
+  background: #07080c;
+  cursor: pointer;
+  font: inherit;
+}
+
+.tv-stage:focus-visible,
+.tv-curtains:focus-visible {
+  outline: 3px solid var(--tl-blue);
+  outline-offset: 3px;
+}
+
+.tv-swap {
+  animation: tv-swapin 0.45s ease-out;
+}
+
+@keyframes tv-swapin {
+  0% { transform: scale(0.94); opacity: 0.4; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.tv-player {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  opacity: 0;
+  animation: tv-player-in 0.4s ease 0.55s forwards;
+}
+
+@keyframes tv-player-in {
+  to { opacity: 1; }
+}
+
+.tv-curtains {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.tv-curtains:disabled {
+  cursor: default;
+}
+
+.tv-open .tv-curtains {
+  pointer-events: none;
+}
+
+/* Panels: folds in the team colours, a soft light/shade, a darker hem. */
+.tv-cur {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 51%;
+  z-index: 3;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0) 18%, rgba(255, 255, 255, 0.08) 30%, rgba(0, 0, 0, 0.25) 45%, rgba(255, 255, 255, 0.08) 60%, rgba(0, 0, 0, 0.3) 75%, rgba(255, 255, 255, 0.06) 88%, rgba(0, 0, 0, 0.35)),
+    repeating-linear-gradient(90deg, var(--c3) 0, var(--c1) 2%, var(--c2) 4.5%, var(--c1) 7%, var(--c3) 9%);
+  transition: transform 0.9s cubic-bezier(0.65, 0, 0.25, 1), opacity 0.3s ease;
+}
+
+.tv-cur::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 22%;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.35));
+}
+
+.tv-cur--l {
+  left: 0;
+  transform-origin: left;
+  border-right: 2px solid rgba(0, 0, 0, 0.25);
+}
+
+.tv-cur--r {
+  right: 0;
+  transform-origin: right;
+}
+
+.tv-valance {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 16%;
+  z-index: 4;
+  background: repeating-linear-gradient(90deg, var(--c3) 0 6%, var(--c1) 3%, var(--c3) 6%);
+  border-bottom: 3px solid var(--gold);
+  border-radius: 0 0 50% 50% / 0 0 30% 30%;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.45);
+  transition: transform 0.7s cubic-bezier(0.6, 0, 0.3, 1) 0.1s, opacity 0.3s ease;
+}
+
+.tv-spot {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: radial-gradient(40% 55% at 50% 60%, rgba(255, 240, 200, 0.22), rgba(255, 240, 200, 0) 70%);
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+
+.tv-cue {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 58px;
+  padding: 0 24px 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f1115;
+  font-size: 17px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  transition: opacity 0.25s, transform 0.25s;
+}
+
+.tv-cue i {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #0f1115;
+  color: #fff;
+  font-size: 13px;
+}
+
+.tv-stage--small .tv-cue {
+  height: 38px;
+  padding: 0 14px 0 6px;
+  font-size: 13px;
+}
+
+.tv-stage--small .tv-cue i {
+  width: 26px;
+  height: 26px;
+  font-size: 10px;
+}
+
+/* Hover: the drapes give a little and the cue grows. */
+.tv-stage:not(.tv-open):hover .tv-cur {
+  transform: scaleX(0.95);
+}
+
+.tv-stage:not(.tv-open):hover .tv-cue {
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+/* Open: drapes bunch at the edges, the valance rises, then they fade so
+   nothing covers the player. */
+.tv-open .tv-cur {
+  transform: scaleX(0.13);
+  opacity: 0;
+  transition: transform 0.9s cubic-bezier(0.65, 0, 0.25, 1), opacity 0.3s ease 0.9s;
+}
+
+.tv-open .tv-valance {
+  transform: translateY(-75%);
+  opacity: 0;
+  transition: transform 0.7s cubic-bezier(0.6, 0, 0.3, 1) 0.1s, opacity 0.3s ease 0.9s;
+}
+
+.tv-open .tv-cue,
+.tv-open .tv-spot {
+  opacity: 0;
+}
+
+/* Can't embed: curtain stays closed under a dark note. */
+.tv-noembed {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(5, 6, 10, 0.72);
+  color: #fff;
+  font-weight: 700;
+}
+
+.tv-noembed a {
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: #fff;
+  color: #0f1115;
+  text-decoration: none;
+}
+
+/* Under the stage */
+.tv-now {
+  color: #e5484d;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tv-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.tv-title--main {
+  font-size: 20px;
+}
+
+.tv-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.tv-tag {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tv-tag--green { background: var(--t-green); color: var(--t-green-fg); }
+.tv-tag--blue { background: var(--t-blue); color: var(--t-blue-fg); }
+.tv-tag--yellow { background: var(--t-yellow); color: var(--t-yellow-fg); }
+.tv-tag--violet { background: var(--t-violet); color: var(--t-violet-fg); }
+.tv-tag--cyan { background: var(--t-cyan); color: var(--t-cyan-fg); }
+.tv-tag--plain { background: var(--surface); color: var(--text); }
+
+.tv-smalls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.tv-small {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .tv {
+    padding: 22px 16px 0;
+  }
+
+  .tv-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tv-side {
+    display: none;
+  }
+
+  .tv-head--phone {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .tv-hint--phone,
+  .tv-more--phone {
+    display: block;
+    margin-top: 6px;
+  }
+
+  .tv-stage {
+    border-radius: 18px;
+  }
+
+  .tv-smalls {
+    gap: 10px;
+  }
+
+  .tv-cue {
+    height: 46px;
+    padding: 0 18px 0 8px;
+    font-size: 15px;
+  }
+
+  .tv-cue i {
+    width: 32px;
+    height: 32px;
+  }
+
+  .tv-stage--small .tv-cue {
+    height: 32px;
+    padding: 0 10px 0 4px;
+    font-size: 12px;
+  }
+
+  .tv-stage--small .tv-cue i {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* Reduced motion: no drape movement, just a quick fade. */
+@media (prefers-reduced-motion: reduce) {
+  .tv-swap,
+  .tv-player {
+    animation-duration: 0.01s;
+    animation-delay: 0s;
+  }
+
+  .tv-cur,
+  .tv-valance,
+  .tv-open .tv-cur,
+  .tv-open .tv-valance {
+    transform: none;
+    transition: opacity 0.2s ease;
+  }
+}

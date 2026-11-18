@@ -1,0 +1,64 @@
+<section class="tv" *ngIf="row as r" [style]="colors" data-cy="find-team-videos" aria-label="Latest videos">
+  <div class="tv-grid">
+    <div class="tv-stagecol">
+      <header class="tv-head tv-head--phone">
+        <h2>Latest videos</h2>
+        <p>The newest from the {{ r.team }}<ng-container *ngIf="r.league"> and the {{ r.league }}</ng-container> on YouTube.</p>
+      </header>
+
+      <!-- Main stage -->
+      <ng-container *ngIf="main as video">
+        <div class="tv-stage tv-stage--main" [class.tv-open]="open && video.embeddable" [class.tv-swap]="swapping">
+          <iframe *ngIf="mainEmbed as url" class="tv-player" [src]="url" [title]="video.title" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+          <button type="button" class="tv-curtains" (click)="openMain()" [attr.aria-label]="playLabel(video)" [disabled]="open" [attr.aria-hidden]="open && video.embeddable ? true : null">
+            <ng-container *ngTemplateOutlet="curtains; context: { $implicit: video }"></ng-container>
+          </button>
+          <div class="tv-noembed" *ngIf="open && !video.embeddable">
+            <span>Plays on YouTube only</span>
+            <a [href]="watchUrl(video)" target="_blank" rel="noopener noreferrer">Watch on YouTube ↗</a>
+          </div>
+        </div>
+        <p class="tv-now" *ngIf="open && video.embeddable"><span aria-hidden="true">●</span> Now playing</p>
+        <h3 class="tv-title tv-title--main">{{ video.title }}</h3>
+        <p class="tv-line">
+          <span class="tv-tag" *ngIf="video.type" [ngClass]="'tv-tag--' + tagTone(video.type)">{{ video.type }}</span>
+          {{ video.channel }}<ng-container *ngIf="video.publishedAt"> · {{ ago(video.publishedAt) }}</ng-container>
+        </p>
+      </ng-container>
+
+      <!-- The two underneath: always closed curtains -->
+      <div class="tv-smalls" *ngIf="smalls.length">
+        <div class="tv-small" *ngFor="let index of smalls; let slot = index; trackBy: trackByIndex">
+          <ng-container *ngIf="r.videos[index] as video">
+            <button type="button" class="tv-stage tv-stage--small" (click)="swap(slot)" [attr.aria-label]="playLabel(video)">
+              <ng-container *ngTemplateOutlet="curtains; context: { $implicit: video }"></ng-container>
+            </button>
+            <h3 class="tv-title">{{ video.title }}</h3>
+            <p class="tv-line">
+              <span class="tv-tag" *ngIf="video.type" [ngClass]="'tv-tag--' + tagTone(video.type)">{{ video.type }}</span>
+              {{ video.channel }}<ng-container *ngIf="video.publishedAt"> · {{ ago(video.publishedAt) }}</ng-container>
+            </p>
+          </ng-container>
+        </div>
+      </div>
+      <p class="tv-hint tv-hint--phone" *ngIf="smalls.length">Tap a video below the big screen to bring it up front.</p>
+      <a class="tv-more tv-more--phone" [href]="r.moreUrl" target="_blank" rel="noopener noreferrer">More on YouTube ↗</a>
+    </div>
+
+    <aside class="tv-side">
+      <h2>Latest videos</h2>
+      <p>The newest from the {{ r.team }}<ng-container *ngIf="r.league"> and the {{ r.league }}</ng-container> on YouTube.</p>
+      <p *ngIf="smalls.length">Tap a video below the big screen to bring it up front.</p>
+      <a class="tv-more" [href]="r.moreUrl" target="_blank" rel="noopener noreferrer">More on YouTube ↗</a>
+    </aside>
+  </div>
+</section>
+
+<!-- Curtains: two folded panels, a valance with a trim, a spotlight, and the play cue. No logos. -->
+<ng-template #curtains let-video>
+  <span class="tv-spot" aria-hidden="true"></span>
+  <span class="tv-cur tv-cur--l" aria-hidden="true"></span>
+  <span class="tv-cur tv-cur--r" aria-hidden="true"></span>
+  <span class="tv-valance" aria-hidden="true"></span>
+  <span class="tv-cue" aria-hidden="true"><i class="fa-solid fa-play"></i> Play<ng-container *ngIf="video.duration"> · {{ video.duration }}</ng-container></span>
+</ng-template>
