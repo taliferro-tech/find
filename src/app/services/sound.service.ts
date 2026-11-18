@@ -1,6 +1,6 @@
 // SYNCED FROM taliferro-ui/sound - edit it there, then run
 // taliferro-ui/sound/sync.sh.
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 
 /** The TODD sound set (Ty, 2026-11-11). Same names as before, so existing calls keep working. */
 const SOUNDS: Record<string, string> = {
@@ -50,7 +50,7 @@ export class SoundService {
   private readonly fallback: Record<string, HTMLAudioElement> = {};
   private lastPlayedAt = 0;
 
-  constructor () {
+  constructor ( private readonly zone: NgZone ) {
     if ( typeof window === 'undefined' || typeof document === 'undefined' ) return;
     // No sounds under browser automation (Cypress, Playwright): an
     // auto-played sound froze Cypress's headless browser at 100% CPU and
@@ -173,7 +173,12 @@ export class SoundService {
       if ( err && !this.quiet( err ) && String( err.textContent || '' ).trim() ) return 'error';
       return '';
     };
-    const start = () => {
+    // Outside Angular: the callback only plays a sound, and running it inside
+    // the zone triggers change detection, whose DOM updates (e.g. an *ngFor
+    // over a getter re-rendering its <option>s) fire the observer again,
+    // forever. That froze the conversion card, and froze Find's home page
+    // again on 2026-11-17 when a sync dropped this. Keep it outside.
+    const start = () => this.zone.runOutsideAngular( () => {
       new MutationObserver( ( mutations ) => {
         let sound = '';
         for ( const m of mutations ) {
@@ -190,7 +195,7 @@ export class SoundService {
         // A toast or a component that already played its own sound covers it.
         if ( sound && Date.now() - this.lastPlayedAt > AUTO_QUIET_MS ) this.play( sound );
       } ).observe( document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] } );
-    };
+    } );
     if ( document.body ) start();
     else document.addEventListener( 'DOMContentLoaded', start, { once: true } );
   }
