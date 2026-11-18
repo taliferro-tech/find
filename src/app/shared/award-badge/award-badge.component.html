@@ -112,6 +112,13 @@
         <rect x="25" y="25" width="8" height="8" rx="1.6"></rect>
       </ng-container>
 
+      <ng-container *ngSwitchCase="'daily'">
+        <rect x="13" y="15" width="20" height="18" rx="2.5"></rect>
+        <line x1="13" y1="21" x2="33" y2="21"></line>
+        <line x1="18" y1="12" x2="18" y2="17"></line>
+        <line x1="28" y1="12" x2="28" y2="17"></line>
+      </ng-container>
+
       <ng-container *ngSwitchCase="'rank'">
         <polyline points="15,22 23,15 31,22"></polyline>
         <polyline points="15,30 23,23 31,30"></polyline>

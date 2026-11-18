@@ -1,0 +1,53 @@
+<section class="fdy" aria-labelledby="fdy-title">
+  <p class="fdy__eyebrow" id="fdy-title">Daily Find</p>
+
+  <p class="fdy__muted" *ngIf="daily.loading && !state">Loading today’s question…</p>
+
+  <ng-container *ngIf="state as s">
+    <ng-container *ngIf="s.available; else noDaily">
+      <h2 class="fdy__question">{{ s.question }}</h2>
+
+      <!-- Not started -->
+      <ng-container *ngIf="s.status === 'new'">
+        <p class="fdy__muted">The same question for everyone today. Find the answer with Find, then pick it from four choices. Right on your first search, inside a minute, scores 100.</p>
+        <button type="button" class="fdy__primary" (click)="start()" [disabled]="busy">Start</button>
+      </ng-container>
+
+      <!-- Playing -->
+      <ng-container *ngIf="s.status === 'playing'">
+        <form class="fdy__search" (ngSubmit)="runSearch()">
+          <input name="dailyQuery" [(ngModel)]="query" type="search" placeholder="Search for the answer…" aria-label="Search for the answer" autocomplete="off" enterkeyhint="search" />
+          <button type="submit" [disabled]="!query.trim()">Find</button>
+        </form>
+        <p class="fdy__muted" *ngIf="!s.searches">Search first; the answers show up after your first search.</p>
+        <ng-container *ngIf="s.choices?.length">
+          <p class="fdy__muted">{{ s.searches }} {{ s.searches === 1 ? 'search' : 'searches' }} so far. Found it? Pick the answer.</p>
+          <div class="fdy__choices" role="group" aria-label="Answers">
+            <button type="button" class="fdy__choice" *ngFor="let choice of s.choices; let i = index" (click)="answer(i)" [disabled]="busy">{{ choice }}</button>
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <!-- Answered -->
+      <ng-container *ngIf="s.status === 'answered' && s.result as r">
+        <div class="fdy__result" [class.fdy__result--right]="r.correct" [class.fdy__result--wrong]="!r.correct" role="status">
+          <strong>{{ r.correct ? 'Right!' : 'Not this time.' }}</strong>
+          <span class="fdy__points">{{ r.points }} <small>points</small></span>
+        </div>
+        <p class="fdy__beat" *ngIf="r.correct && r.beat !== null">You beat {{ r.beat }}% of Finders today.</p>
+        <div class="fdy__choices fdy__choices--done">
+          <span class="fdy__choice" *ngFor="let choice of s.choices; let i = index" [class.fdy__choice--right]="i === r.answerIndex" [class.fdy__choice--picked]="i === r.choice && !r.correct">{{ choice }}</span>
+        </div>
+        <p class="fdy__muted" *ngIf="r.explanation">{{ r.explanation }}<ng-container *ngIf="r.sourceUrl"> <a [href]="r.sourceUrl" target="_blank" rel="noopener noreferrer">{{ r.sourceTitle || 'Source' }}</a></ng-container></p>
+        <button type="button" class="fdy__primary" (click)="share()"><i class="fa-solid fa-arrow-up-from-bracket" aria-hidden="true"></i> Share my result</button>
+        <p class="fdy__muted" *ngIf="shareMessage" role="status">{{ shareMessage }}</p>
+        <p class="fdy__muted">A new question tomorrow.</p>
+      </ng-container>
+    </ng-container>
+    <ng-template #noDaily>
+      <p class="fdy__muted">No Daily Find today. Check back tomorrow.</p>
+    </ng-template>
+  </ng-container>
+
+  <p class="fdy__error" *ngIf="message" role="alert">{{ message }}</p>
+</section>

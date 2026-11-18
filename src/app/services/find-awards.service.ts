@@ -6,7 +6,7 @@ import { FindExperienceService, FindRank, FindScoreAward, FindScoreBadge, FindSc
 export type FindAwardIcon =
   | 'rebel' | 'curious' | 'night-owl' | 'early-bird' | 'connector' | 'sharp-eye'
   | 'explorer' | 'specialist' | 'relentless' | 'tastemaker' | 'legend'
-  | 'streak' | 'collector' | 'all-cards' | 'rank';
+  | 'streak' | 'collector' | 'all-cards' | 'rank' | 'daily';
 
 export type FindAwardState = 'unlocked' | 'locked' | 'mystery';
 
@@ -48,7 +48,7 @@ interface UnlockedRecord {
   unlockedAt: string;
 }
 
-const KNOWN_ICONS: FindAwardIcon[] = [ 'rebel', 'curious', 'night-owl', 'early-bird', 'connector', 'sharp-eye', 'explorer', 'specialist', 'relentless', 'tastemaker', 'legend', 'streak', 'collector', 'all-cards', 'rank' ];
+const KNOWN_ICONS: FindAwardIcon[] = [ 'rebel', 'curious', 'night-owl', 'early-bird', 'connector', 'sharp-eye', 'explorer', 'specialist', 'relentless', 'tastemaker', 'legend', 'streak', 'collector', 'all-cards', 'rank', 'daily' ];
 const GROUP_TITLES: Record<FindScoreBadge['group'], string> = { searches: 'Searches', streaks: 'Streaks', cards: 'Cards', daily: 'Daily Find' };
 
 // The on-device ladder from before Find Score. It's still counted until the
