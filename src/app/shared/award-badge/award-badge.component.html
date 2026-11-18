@@ -90,6 +90,40 @@
         <polygon points="23,10 25.9,17.2 33.5,17.5 27.4,22.3 29.6,29.6 23,25.3 16.4,29.6 18.6,22.3 12.5,17.5 20.1,17.2"></polygon>
       </ng-container>
 
+      <!-- Find Score badges (2026-11-17) -->
+      <ng-container *ngSwitchCase="'legend'">
+        <polyline points="13,29 15,16 20,22 23,13 26,22 31,16 33,29"></polyline>
+        <line x1="13" y1="32" x2="33" y2="32"></line>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'streak'">
+        <path d="M23 34c-5 0-8-3.4-8-7.6 0-4.6 4-6.8 4.6-12 3.2 2 4.2 5 4 7.4 1.4-1 2.2-2.8 2.2-4.6 3 2.4 5.2 5.6 5.2 9.2 0 4.2-3 7.6-8 7.6z"></path>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'collector'">
+        <rect x="14" y="16" width="13" height="17" rx="2"></rect>
+        <path d="M19 13h11a2 2 0 0 1 2 2v15"></path>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'all-cards'">
+        <rect x="13" y="13" width="8" height="8" rx="1.6"></rect>
+        <rect x="25" y="13" width="8" height="8" rx="1.6"></rect>
+        <rect x="13" y="25" width="8" height="8" rx="1.6"></rect>
+        <rect x="25" y="25" width="8" height="8" rx="1.6"></rect>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'daily'">
+        <rect x="13" y="15" width="20" height="18" rx="2.5"></rect>
+        <line x1="13" y1="21" x2="33" y2="21"></line>
+        <line x1="18" y1="12" x2="18" y2="17"></line>
+        <line x1="28" y1="12" x2="28" y2="17"></line>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'rank'">
+        <polyline points="15,22 23,15 31,22"></polyline>
+        <polyline points="15,30 23,23 31,30"></polyline>
+      </ng-container>
+
     </g>
   </svg>
 
