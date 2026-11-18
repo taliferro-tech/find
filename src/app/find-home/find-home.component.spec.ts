@@ -606,7 +606,7 @@ describe('FindHomeComponent', () => {
         panel: {
           kind: 'contact', label: 'Contact', title: 'Book a consultation', text: '',
           contacts: [
-            { kind: 'call', label: 'Call', value: '(401) 646-2662', url: 'tel:+14016462662' },
+            { kind: 'call', label: 'Call', value: '(425) 790-9986', url: 'tel:+14257909986' },
             { kind: 'email', label: 'Email', value: 'info@taliferro.tech', url: 'mailto:info@taliferro.tech?subject=Consultation' },
             { kind: 'directions', label: 'Directions', value: '1424 11th Ave, Seattle', url: 'https://www.google.com/maps/search/?api=1&query=x' },
           ],
@@ -623,7 +623,7 @@ describe('FindHomeComponent', () => {
     const card = root().querySelector('[data-cy="find-entity-card"]')!;
     const panel = card.querySelector('[data-cy="find-first-party-panel"]')!;
     expect(Array.from(panel.querySelectorAll<HTMLAnchorElement>('a')).map(link => link.getAttribute('href'))).toEqual([
-      'tel:+14016462662', 'mailto:info@taliferro.tech?subject=Consultation', 'https://www.google.com/maps/search/?api=1&query=x',
+      'tel:+14257909986', 'mailto:info@taliferro.tech?subject=Consultation', 'https://www.google.com/maps/search/?api=1&query=x',
     ]);
     // tel: and mailto: stay in the page; only web links open a tab.
     expect(panel.querySelector('a')!.getAttribute('target')).toBeNull();
