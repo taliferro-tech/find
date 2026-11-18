@@ -1,6 +1,6 @@
 // SYNCED FROM taliferro-ui/sound - edit it there, then run
 // taliferro-ui/sound/sync.sh.
-import { Injectable, NgZone } from '@angular/core';
+import { Injectable } from '@angular/core';
 
 /** The TODD sound set (Ty, 2026-11-11). Same names as before, so existing calls keep working. */
 const SOUNDS: Record<string, string> = {
@@ -50,8 +50,12 @@ export class SoundService {
   private readonly fallback: Record<string, HTMLAudioElement> = {};
   private lastPlayedAt = 0;
 
-  constructor ( private readonly zone: NgZone ) {
+  constructor () {
     if ( typeof window === 'undefined' || typeof document === 'undefined' ) return;
+    // No sounds under browser automation (Cypress, Playwright): an
+    // auto-played sound froze Cypress's headless browser at 100% CPU and
+    // hung the deploy's e2e run (2026-11-17). Real visitors never set this.
+    if ( typeof navigator !== 'undefined' && navigator.webdriver ) return;
     this.preload();
 
     const wake = () => { if ( this.ctx && this.ctx.state === 'suspended' ) void this.ctx.resume().catch( () => undefined ); };
@@ -151,18 +155,25 @@ export class SoundService {
 
   private watchForPopupsAndErrors (): void {
     if ( typeof MutationObserver === 'undefined' ) return;
+    // A closed panel that stays in the page (the assistant window is always
+    // rendered with role="dialog", hidden by opacity + pointer-events) isn't
+    // a popup appearing; only count dialogs that are on screen and usable.
+    // Opacity isn't checked, so a dialog that fades in still counts.
+    const shown = ( el: Element ): boolean => {
+      if ( el.closest( '[hidden], [inert], [aria-hidden="true"]' ) ) return false;
+      if ( typeof ( el as any ).checkVisibility === 'function' && !( el as any ).checkVisibility( { visibilityProperty: true, checkVisibilityCSS: true } ) ) return false;
+      return getComputedStyle( el ).pointerEvents !== 'none';
+    };
+    const popupIn = ( el: Element ): boolean =>
+      ( el.matches( POPUP_SELECTOR ) && shown( el ) ) || Array.from( el.querySelectorAll( POPUP_SELECTOR ) ).some( shown );
     const check = ( el: Element ): string => {
       if ( this.quiet( el ) ) return '';
-      if ( el.matches( POPUP_SELECTOR ) || el.querySelector( POPUP_SELECTOR ) ) return 'alert';
+      if ( popupIn( el ) ) return 'alert';
       const err = el.matches( ERROR_SELECTOR ) ? el : el.querySelector( ERROR_SELECTOR );
       if ( err && !this.quiet( err ) && String( err.textContent || '' ).trim() ) return 'error';
       return '';
     };
-    // Outside Angular: the callback only plays a sound, and running it inside
-    // the zone triggers change detection, whose DOM updates (e.g. an *ngFor
-    // over a getter re-rendering its <option>s) fire the observer again,
-    // forever. That froze the conversion card.
-    const start = () => this.zone.runOutsideAngular( () => {
+    const start = () => {
       new MutationObserver( ( mutations ) => {
         let sound = '';
         for ( const m of mutations ) {
@@ -179,7 +190,7 @@ export class SoundService {
         // A toast or a component that already played its own sound covers it.
         if ( sound && Date.now() - this.lastPlayedAt > AUTO_QUIET_MS ) this.play( sound );
       } ).observe( document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] } );
-    } );
+    };
     if ( document.body ) start();
     else document.addEventListener( 'DOMContentLoaded', start, { once: true } );
   }
