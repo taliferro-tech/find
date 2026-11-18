@@ -93,7 +93,7 @@
     </ng-container>
     <div class="find-result-loading" *ngIf="isLoading && !showEntityCard">
       <span class="find-spinner find-spinner--lg" aria-hidden="true"></span>
-      <p>Finding the strongest result… {{ liveElapsedSeconds }}s</p>
+      <p role="status">{{ searchStageText }} {{ liveElapsedSeconds }}s</p>
     </div>
     <!-- Shown once result is available -->
     <ng-container *ngIf="result && !isLoading && !showEntityCard">
@@ -130,6 +130,10 @@
         </ng-container>
         <ng-template #pagerSpacer><span class="find-pager__spacer" aria-hidden="true"></span></ng-template>
       </nav>
+      <p class="find-refining" *ngIf="isRefining" role="status">
+        <span class="find-spinner" aria-hidden="true"></span>
+        {{ searchStageText }} {{ liveElapsedSeconds }}s
+      </p>
       <div class="find-body">
         <!-- ── WEATHER ── -->
         <ng-container *ngIf="isWeatherMode; else nonWeatherView">
@@ -388,8 +392,8 @@
         <p>Looking for contact details or prospects?</p>
         <a [href]="leadVaultSearchUrl">Search “{{ result.query || query }}” in Lead Vault</a>
       </div>
-      <!-- Footer: one-row feedback + source/timing meta -->
-      <footer class="find-footer">
+      <!-- Footer: one-row feedback + source/timing meta (after the full response) -->
+      <footer class="find-footer" *ngIf="!isRefining">
         <ng-container *ngIf="!isDetailView">
           <ng-container *ngIf="!feedbackSent; else feedbackThanks">
             <span class="find-footer__prompt">Right find?</span>

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpEventType, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { FindExperienceService } from './find-experience.service';
+import { FindExperienceService, FindSearchEvent } from './find-experience.service';
 
 describe('FindExperienceService', () => {
   let service: FindExperienceService;
@@ -131,4 +131,46 @@ describe('FindExperienceService', () => {
     expect(response.conversion.source).toBe('Find results');
   });
 
+
+  describe('results first (2026-11-17)', () => {
+    const line = (message: unknown) => JSON.stringify(message) + '\n';
+    const final = { success: true, query: 'acme', normalizedQuery: 'acme', queryType: 'entity', results: [{ url: 'https://acme.example/', title: 'Acme', imageUrl: 'https://acme.example/og.png' }], selectedIndex: 0 };
+
+    it('streams the stage and the early cards before the full response', () => {
+      const events: FindSearchEvent[] = [];
+      service.searchStream({ query: 'acme' }).subscribe(event => events.push(event));
+      const request = http.expectOne(item => item.url.endsWith('/find/search'));
+      expect(request.request.body.stream).toBeTrue();
+      expect(request.request.responseType).toBe('text');
+
+      const early = line({ type: 'stage', stage: 'planning' })
+        + line({ type: 'results', query: 'acme', queryType: 'entity', results: [{ url: 'https://acme.example/', title: 'Acme' }] })
+        + line({ type: 'stage', stage: 'checking', pageCount: 3 })
+        + '{"type":"fin'; // a message still arriving is not read yet
+      request.event({ type: HttpEventType.DownloadProgress, loaded: early.length, partialText: early } as any);
+      expect(events.map(event => event.type)).toEqual(['stage', 'results', 'stage']);
+      expect((events[1] as any).response.results[0].url).toBe('https://acme.example/');
+      expect((events[2] as any).pageCount).toBe(3);
+
+      const whole = early.slice(0, early.lastIndexOf('\n') + 1) + line({ type: 'final', response: final });
+      request.flush(whole);
+      expect(events.map(event => event.type)).toEqual(['stage', 'results', 'stage', 'final']);
+      expect((events[3] as any).response.results[0].imageUrl).toBe('https://acme.example/og.png');
+    });
+
+    it('reads a plain JSON reply (no stream) as the full response', () => {
+      const events: FindSearchEvent[] = [];
+      service.searchStream({ query: 'acme' }).subscribe(event => events.push(event));
+      http.expectOne(item => item.url.endsWith('/find/search')).flush(JSON.stringify(final));
+      expect(events.length).toBe(1);
+      expect(events[0].type).toBe('final');
+    });
+
+    it('turns a stream error message into an error', () => {
+      let failed = '';
+      service.searchStream({ query: 'acme' }).subscribe({ error: (err) => (failed = err.message) });
+      http.expectOne(item => item.url.endsWith('/find/search')).flush(line({ type: 'stage', stage: 'planning' }) + line({ type: 'error', message: 'Find search failed' }));
+      expect(failed).toBe('Find search failed');
+    });
+  });
 });

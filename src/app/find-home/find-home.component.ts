@@ -87,6 +87,10 @@ export class FindHomeComponent implements OnInit, OnDestroy {
   breadcrumb: string[] = [];
   loadingElapsedMs = 0;
   lastResponseMs = 0;
+  /** Results first: cards are showing and Find is still checking their pages. */
+  isRefining = false;
+  searchStage: 'planning' | 'checking' = 'planning';
+  checkingPageCount = 0;
 
   activeView: FindView = 'search';
   /** Guides is a server page; the tab spins until the browser leaves, so a slow start doesn't look like a dead tap. */
@@ -1230,6 +1234,14 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     if ( normalized ) this.brokenImageUrls.add( normalized );
   }
 
+  /** What a running search is doing, from the backend's own progress messages. */
+  get searchStageText (): string {
+    if ( this.searchStage === 'checking' && this.checkingPageCount > 0 ) {
+      return `Checking ${ this.checkingPageCount } ${ this.checkingPageCount === 1 ? 'page' : 'pages' }…`;
+    }
+    return this.searchStage === 'checking' ? 'Checking the results…' : 'Understanding your search…';
+  }
+
   get liveElapsedSeconds (): string {
     return ( this.loadingElapsedMs / 1000 ).toFixed( 1 );
   }
@@ -1843,6 +1855,9 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     this.activeContext = normalizedContext;
     this.syncBreadcrumb();
     this.isLoading = true;
+    this.isRefining = false;
+    this.searchStage = 'planning';
+    this.checkingPageCount = 0;
     this.startLoadingTimer();
     this.errorMessage = '';
     // Switch to result view immediately so the loading spinner shows there
@@ -1882,14 +1897,28 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     }
 
     this.resolveCoordinatesForQuery( query ).then( ( coords ) => {
-      this.findExperienceService.search( {
+      let gotFinal = false;
+      this.findExperienceService.searchStream( {
         query,
         context: normalizedContext || null,
         maxResults: 16,
         latitude: coords?.latitude ?? null,
         longitude: coords?.longitude ?? null
       } ).subscribe( {
-        next: ( response ) => {
+        next: ( event ) => {
+          // A newer search started; this one's messages no longer apply.
+          if ( searchId !== this.searchId ) return;
+          if ( event.type === 'stage' ) {
+            this.searchStage = event.stage;
+            if ( event.stage === 'checking' ) this.checkingPageCount = event.pageCount || 0;
+            return;
+          }
+          if ( event.type === 'results' ) {
+            this.applyResultsPreview( event.response );
+            return;
+          }
+          gotFinal = true;
+          const response = event.response;
           if ( !response?.rssBacked ) {
             this.applySearchResponse( response, query );
             return;
@@ -1901,14 +1930,12 @@ export class FindHomeComponent implements OnInit, OnDestroy {
           } );
         },
         error: ( err ) => {
-          this.isLoading = false;
-          this.stopLoadingTimer();
-          this.result = null;
-          this.updateCards();
-          this.activeView = 'search';
-          this.selectedResultIndex = 0;
-          this.errorMessage = err?.error?.message || err?.message || 'Find could not produce a result right now.';
-          this.syncConversionState( null );
+          if ( searchId !== this.searchId ) return;
+          this.showSearchError( err?.error?.message || err?.message );
+        },
+        // The stream ended without the full response (connection dropped).
+        complete: () => {
+          if ( !gotFinal && searchId === this.searchId ) this.showSearchError();
         }
       } );
     } );
@@ -1970,7 +1997,43 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     this.entityDismissed = false;
   }
 
+  private showSearchError ( message?: string ): void {
+    this.isLoading = false;
+    this.isRefining = false;
+    this.stopLoadingTimer();
+    this.result = null;
+    this.updateCards();
+    this.activeView = 'search';
+    this.selectedResultIndex = 0;
+    this.errorMessage = message || 'Find could not produce a result right now.';
+    this.syncConversionState( null );
+  }
+
+  /**
+   * Results first: the web search's cards show while Find checks the pages.
+   * Questions wait for their answer, which is the point of those searches.
+   * Nothing is saved, rated or awarded until the full response arrives.
+   */
+  private applyResultsPreview ( response: FindSearchResponse ): void {
+    if ( !this.isLoading || response.queryType === 'question' || !response.results?.length ) return;
+    this.isLoading = false;
+    this.isRefining = true;
+    this.result = response;
+    this.watchMessage = '';
+    this.followup = null;
+    this.followupText = '';
+    this.syncConversionState( null );
+    this.selectedResultIndex = 0;
+    this.resultIndex = 0;
+    this.updateCards();
+    this.highlightedPill = '';
+    this.activeView = 'result';
+  }
+
   private applySearchResponse ( response: FindSearchResponse, query: string ): void {
+    // The card someone is reading stays in front when the details arrive.
+    const readingUrl = this.isRefining ? String( this.currentCard?.url || '' ) : '';
+    this.isRefining = false;
     this.isLoading = false;
     this.stopLoadingTimer( response?.timings?.totalMs );
     this.result = response || null;
@@ -1981,6 +2044,13 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     this.selectedResultIndex = Math.max( 0, Math.min( response.selectedIndex || 0, ( response.results?.length || 1 ) - 1 ) );
     this.resultIndex = this.selectedResultIndex;
     this.updateCards();
+    if ( readingUrl ) {
+      const stillThere = this.allCards.findIndex( card => card.url === readingUrl );
+      if ( stillThere >= 0 ) {
+        this.resultIndex = stillThere;
+        this.currentCard = this.allCards[stillThere];
+      }
+    }
     this.highlightedPill = '';
     this.activeView = 'result';
     this.saveToHistory( query );
