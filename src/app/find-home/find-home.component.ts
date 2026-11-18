@@ -263,6 +263,8 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     this.gyroSupported = this.gyroscope.isSupported;
     this.loadHistory();
     if ( this.readFlag( this.HAS_WATCHES_KEY ) ) this.refreshWatches();
+    // So the Daily Find button can say "Played today" once it's answered.
+    this.dailyService.load().subscribe();
 
     this.routeSub = this.route.queryParamMap.subscribe( ( params ) => {
       // Support both the app's internal `query` parameter and browser search
