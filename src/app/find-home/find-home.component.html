@@ -110,6 +110,7 @@
     <div class="find-result-loading" *ngIf="isLoading && !showEntityCard">
       <span class="find-spinner find-spinner--lg" aria-hidden="true"></span>
       <p role="status">{{ searchStageText }} {{ liveElapsedSeconds }}s</p>
+      <ng-container *ngTemplateOutlet="readyNotice"></ng-container>
     </div>
     <!-- Shown once result is available -->
     <ng-container *ngIf="result && !isLoading && !showEntityCard">
@@ -155,6 +156,7 @@
         <span class="find-spinner" aria-hidden="true"></span>
         {{ searchStageText }} {{ liveElapsedSeconds }}s
       </p>
+      <ng-container *ngIf="isRefining"><ng-container *ngTemplateOutlet="readyNotice"></ng-container></ng-container>
       <div class="find-body">
         <!-- ── WEATHER ── -->
         <ng-container *ngIf="isWeatherMode; else nonWeatherView">
@@ -676,6 +678,13 @@
          where it competed with the search. -->
     <app-site-footer><a href="/guides">Guides</a><a routerLink="/help">Help</a><a routerLink="/about">About</a></app-site-footer>
   </div>
+  <!-- "Let me know when it's ready" on a slow search -->
+  <ng-template #readyNotice>
+    <p class="find-ready" *ngIf="notifyOffer">
+      <button type="button" class="find-ready__ask" *ngIf="!notifyWhenReady; else readyAsked" (click)="requestReadyNotice()"><i class="fa-regular fa-bell" aria-hidden="true"></i> Let me know when it’s ready</button>
+      <ng-template #readyAsked><span role="status">We’ll let you know. Feel free to switch tabs.</span></ng-template>
+    </p>
+  </ng-template>
   <!-- ── DAILY FIND VIEW ──────────────────────────────────────── -->
   <div class="find-awards-screen" data-cy="find-daily-shell" *ngIf="activeView === 'daily'">
     <div class="find-screen-header">
