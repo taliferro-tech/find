@@ -1,0 +1,362 @@
+/* ── Find Score (2026-11-17): rank chip, points, the Awards card ── */
+.find-rank-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px auto 0;
+  padding: 6px 14px;
+  border: 1px solid var(--todd-surface-2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--todd-panel-text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.find-rank-chip i {
+  color: var(--tl-blue);
+}
+
+.find-rank-chip__streak {
+  color: var(--todd-panel-subtext);
+  font-weight: 600;
+}
+
+.find-rank-chip__streak i {
+  color: #ff9f43;
+}
+
+.find-footer__points {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tl-blue) 16%, transparent);
+  color: var(--tl-blue);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.find-score-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 22px;
+  padding: 20px;
+  border-radius: 20px;
+  background: var(--todd-surface-2);
+}
+
+.find-score-card__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.find-score-card__name strong {
+  font-size: 1.2rem;
+  color: var(--todd-panel-text);
+}
+
+.find-score-card__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tl-blue);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.find-score-card__nickname {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.find-score-card__nickname input {
+  flex: 1 1 160px;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--todd-panel-subtext);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--todd-panel-text);
+  font-size: 16px;
+}
+
+.find-score-card__nickname button[type="submit"] {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--tl-blue);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.find-score-card__nickname button[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.find-score-card__error {
+  width: 100%;
+  margin: 0;
+  color: #ff7b7b;
+  font-size: 0.85rem;
+}
+
+.find-score-card__rank {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.find-score-card__rank-name {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--tl-blue);
+}
+
+.find-score-card__points {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--todd-panel-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.find-score-card__points small {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--todd-panel-subtext);
+}
+
+.find-score-card .find-awards-progress {
+  margin-bottom: 0;
+}
+
+.find-score-card__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 0.85rem;
+  color: var(--todd-panel-subtext);
+}
+
+.find-score-card__stats i {
+  color: #ff9f43;
+}
+
+.find-score-card__share {
+  align-self: flex-start;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tl-blue);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.find-score-card__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--todd-panel-subtext);
+}
+
+.find-awards-group + .find-awards-group {
+  margin-top: 30px;
+}
+
+.find-awards-group__title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--todd-panel-subtext);
+}
+
+.find-awards-group .find-awards-grid {
+  margin-top: 16px;
+}
+
+.find-awards-grid__goal {
+  margin-top: -6px;
+  font-size: 0.72rem;
+  color: var(--todd-panel-subtext);
+}
+
+.find-score-recovery {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid var(--todd-surface-2);
+  font-size: 0.9rem;
+  color: var(--todd-panel-subtext);
+}
+
+.find-score-recovery h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: var(--todd-panel-text);
+}
+
+.find-score-recovery p {
+  margin: 0 0 8px;
+}
+
+.find-score-recovery .find-score-card__nickname {
+  margin-top: 10px;
+}
+
+.find-score-recovery__code {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--todd-surface-2);
+  color: var(--todd-panel-text);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  user-select: all;
+}
+
+@media (min-width: 640px) {
+  .find-awards-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ── Daily Find entry (home) and banner (results) ── */
+.find-daily-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+  margin: 14px auto 0;
+  padding: 12px 16px;
+  border: 1px solid var(--todd-surface-2);
+  border-radius: 16px;
+  background: var(--todd-surface-2);
+  color: var(--todd-panel-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.find-daily-entry > i:first-child {
+  color: var(--tl-blue);
+  font-size: 1.1rem;
+}
+
+.find-daily-entry span {
+  flex: 1;
+  min-width: 0;
+}
+
+.find-daily-entry small {
+  display: block;
+  color: var(--todd-panel-subtext);
+}
+
+.find-daily-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: calc(100% - 32px);
+  max-width: 560px;
+  margin: 0 auto 10px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--tl-blue) 16%, transparent);
+  color: var(--todd-panel-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.find-daily-banner strong {
+  color: var(--tl-blue);
+}
+
+/* ── Crews: invite banner (home) and rarity on badges ── */
+.find-crew-invite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin: 14px auto 0;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--tl-blue) 16%, transparent);
+  color: var(--todd-panel-text);
+}
+
+.find-crew-invite span {
+  flex: 1 1 200px;
+}
+
+.find-crew-invite small {
+  display: block;
+  color: var(--todd-panel-subtext);
+}
+
+.find-crew-invite__join {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tl-blue);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.find-crew-invite__later {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--todd-panel-subtext);
+  cursor: pointer;
+}
+
+.find-awards-rare {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f5b041;
+  color: #1a1a1a;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+/* ── "Let me know when it's ready" ── */
+.find-ready {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 10px;
+  font-size: 13px;
+  color: var(--todd-panel-subtext);
+}
+
+.find-ready__ask {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--todd-surface-2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--tl-blue);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}

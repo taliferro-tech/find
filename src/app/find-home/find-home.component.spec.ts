@@ -144,6 +144,7 @@ describe('FindHomeComponent', () => {
     localStorage.removeItem('find-history');
     localStorage.removeItem('find-awards-count');
     localStorage.removeItem('find-awards-unlocked');
+    localStorage.removeItem('find-score-profile');
     localStorage.removeItem('find.useLocation');
     localStorage.removeItem('find.hasWatches');
 
@@ -184,6 +185,17 @@ describe('FindHomeComponent', () => {
     // cancels the older question.
     for (const pending of http.match(r => r.url.endsWith('/find/entity'))) {
       if (!pending.cancelled) pending.flush({ entity: null });
+    }
+    // Opening Awards loads the Find Score profile; unless a test answers, the backend is away.
+    // The Awards screen's crews: none unless a test says so.
+    for (const pending of http.match(r => r.url.endsWith('/find/crews'))) {
+      if (!pending.cancelled) pending.flush({ success: true, crews: [] });
+    }
+    // (A failed local-emulator call retries the hosted API, so flush until none are left.)
+    for (let round = 0; round < 3; round++) {
+      for (const pending of http.match(r => r.url.includes('/find/score/'))) {
+        if (!pending.cancelled) pending.flush({ success: false }, { status: 503, statusText: 'Unavailable' });
+      }
     }
     http.verify();
   });
@@ -1380,6 +1392,214 @@ describe('FindHomeComponent', () => {
     expect(footer).not.toBeNull();
     expect(footer!.textContent).toContain('support@16ahead.com');
     expect(footer!.textContent).toContain('Privacy Policy');
+  }));
+
+  // --- Find Score (2026-11-17) ---
+
+  function makeProfile(overrides: Record<string, unknown> = {}) {
+    return {
+      nickname: 'Finder 4821', hasNickname: false, publicCode: 'AbCd1234', score: 412, weekScore: 60, weekKey: '2026-11-16',
+      rank: { name: 'Tracker', min: 250, level: 2, next: { name: 'Sleuth', min: 750, toGo: 338 } },
+      streak: { count: 4, best: 6, lastDay: '2026-11-17' }, searchCount: 31, imported: true, hasRecoveryCode: false,
+      shareUrl: 'https://find.16ahead.com/p/AbCd1234',
+      badges: [
+        { id: 'rebel', group: 'searches', title: 'The Rebel', copy: 'x', icon: 'rebel', goal: '1 search', state: 'earned', earnedAt: 1 },
+        { id: 'streak-7', group: 'streaks', title: 'Week Strong', copy: 'x', icon: 'streak', goal: '7-day streak', state: 'locked' },
+        { id: 'collector-words', group: 'cards', title: 'Wordsmith', copy: 'x', icon: 'collector', goal: 'Find this kind of card', state: 'locked' },
+      ],
+      ...overrides,
+    };
+  }
+
+  it('a scored search shows the points it earned and a new badge, and sends the device', fakeAsync(() => {
+    const score = {
+      points: 12, reasons: [], total: 12, weekScore: 12, rankUp: null, streak: 1,
+      rank: { name: 'Scout', min: 0, level: 1, next: { name: 'Tracker', min: 250, toGo: 238 } },
+      newBadges: [{ id: 'rebel', group: 'searches', title: 'The Rebel', copy: 'You go find it yourself.', icon: 'rebel', state: 'earned' }],
+    };
+    component.query = 'space needle';
+    harness.detectChanges();
+    submitButton().click();
+    tick();
+    const req = http.expectOne(r => r.url.endsWith('/find/search'));
+    expect(req.request.body.deviceId).toMatch(/^[A-Za-z0-9-]{16,64}$/);
+    req.flush(makeEntityResponse('space needle', { score } as Partial<FindSearchResponse>));
+    tick();
+    harness.detectChanges();
+    drainSummarize();
+
+    expect(component.pendingAwardUnlock?.title).toBe('The Rebel');
+    expect(root().querySelector('.find-award-unlock__title')?.textContent).toContain('The Rebel');
+    component.dismissAwardUnlock();
+    harness.detectChanges();
+    expect(root().querySelector('.find-footer__points')?.textContent).toContain('+12 points');
+    // The first scored search of a visit loads the whole profile.
+    http.expectOne(r => r.url.endsWith('/find/score/profile')).flush({ success: true, profile: makeProfile() });
+    tick();
+  }));
+
+  it('a new rank shows before a new badge', fakeAsync(() => {
+    const score = {
+      points: 25, reasons: [], total: 260, weekScore: 40, rankUp: 'Tracker', streak: 3,
+      rank: { name: 'Tracker', min: 250, level: 2, next: { name: 'Sleuth', min: 750, toGo: 490 } },
+      newBadges: [{ id: 'streak-3', group: 'streaks', title: 'Three in a Row', copy: 'x', icon: 'streak', state: 'earned' }],
+    };
+    runSearch('space needle', makeEntityResponse('space needle', { score } as Partial<FindSearchResponse>));
+    expect(component.pendingAwardUnlock?.eyebrow).toBe('New Rank');
+    expect(component.pendingAwardUnlock?.title).toBe('Tracker');
+    expect(component.pendingAwardUnlock?.copy).toContain('490 more to Sleuth');
+    http.expectOne(r => r.url.endsWith('/find/score/profile')).flush({ success: true, profile: makeProfile() });
+    tick();
+  }));
+
+  it('Awards shows the rank, points, streak and badges by kind, and saves a nickname', fakeAsync(() => {
+    byLabel('Awards').click();
+    http.expectOne(r => r.url.endsWith('/find/score/profile')).flush({ success: true, profile: makeProfile() });
+    tick();
+    harness.detectChanges();
+
+    const screen = root().querySelector('.find-awards-screen')!;
+    expect(screen.querySelector('.find-score-card__rank-name')?.textContent).toContain('Tracker');
+    expect(screen.querySelector('.find-score-card__points')?.textContent).toContain('412');
+    expect(screen.textContent).toContain('338 to Sleuth');
+    expect(screen.textContent).toContain('4-day streak');
+    expect(Array.from(screen.querySelectorAll('.find-awards-group__title')).map(el => el.textContent?.trim())).toEqual(['Searches', 'Streaks', 'Cards']);
+    expect(screen.textContent).toContain('7-day streak');
+
+    component.startNicknameEdit();
+    component.nicknameDraft = 'Vikki';
+    component.saveNickname();
+    const save = http.expectOne(r => r.url.endsWith('/find/score/nickname'));
+    expect(save.request.body).toEqual({ deviceId: jasmine.any(String), nickname: 'Vikki' });
+    save.flush({ success: true, profile: makeProfile({ nickname: 'Vikki', hasNickname: true }) });
+    tick();
+    harness.detectChanges();
+    expect(component.editingNickname).toBeFalse();
+    expect(screen.querySelector('.find-score-card__name strong')?.textContent).toContain('Vikki');
+
+    // The rank chip on the home screen comes from the same profile.
+    component.resetToSearch();
+    harness.detectChanges();
+    expect(root().querySelector('.find-rank-chip')?.textContent).toContain('Tracker · 412');
+  }));
+
+  it('a rejected nickname says why', fakeAsync(() => {
+    byLabel('Awards').click();
+    http.expectOne(r => r.url.endsWith('/find/score/profile')).flush({ success: true, profile: makeProfile() });
+    tick();
+    component.startNicknameEdit();
+    component.nicknameDraft = 'Find Admin';
+    component.saveNickname();
+    // Tests run on localhost, so the local emulator is asked first and the hosted API after it.
+    for (let round = 0; round < 2; round++) {
+      http.expectOne(r => r.url.endsWith('/find/score/nickname')).flush({ success: false, message: 'Please pick a different nickname.' }, { status: 400, statusText: 'Bad Request' });
+      tick();
+    }
+    expect(component.nicknameError).toBe('Please pick a different nickname.');
+    expect(component.editingNickname).toBeTrue();
+  }));
+
+  it('plays a Daily Find: start, search in Find, answer, and see how others did (2026-11-17)', fakeAsync(() => {
+    const base = { available: true, date: '2026-11-17', question: 'What year did the Space Needle open?' };
+    component.setView('daily');
+    harness.detectChanges();
+    http.expectOne(r => r.url.endsWith('/find/daily')).flush({ success: true, daily: { ...base, status: 'new', searches: 0 } });
+    tick();
+    harness.detectChanges();
+    const screen = () => root().querySelector('[data-cy="find-daily-shell"]')!;
+    expect(screen().textContent).toContain('What year did the Space Needle open?');
+
+    screen().querySelector<HTMLButtonElement>('.fdy__primary')!.click();
+    const start = http.expectOne(r => r.url.endsWith('/find/daily/start'));
+    expect(start.request.body.date).toBe('2026-11-17');
+    start.flush({ success: true, daily: { ...base, status: 'playing', searches: 0 } });
+    tick();
+    harness.detectChanges();
+    expect(screen().textContent).toContain('answers show up after your first search');
+
+    // The search runs in Find, tagged for today's question.
+    component.runDailySearch('space needle opened year');
+    tick();
+    const search = http.expectOne(r => r.url.endsWith('/find/search'));
+    expect(search.request.body.dailyDate).toBe('2026-11-17');
+    search.flush(makeEntityResponse('space needle opened year', { daily: { date: '2026-11-17', searches: 1 } } as Partial<FindSearchResponse>));
+    tick();
+    harness.detectChanges();
+    drainSummarize();
+    // The first counted search unlocks the choices.
+    http.expectOne(r => r.url.endsWith('/find/daily')).flush({ success: true, daily: { ...base, status: 'playing', searches: 1, choices: ['1958', '1962', '1965', '1970'] } });
+    tick();
+    harness.detectChanges();
+    expect(root().querySelector('.find-daily-banner')).toBeTruthy();
+
+    component.setView('daily');
+    harness.detectChanges();
+    http.expectOne(r => r.url.endsWith('/find/daily')).flush({ success: true, daily: { ...base, status: 'playing', searches: 1, choices: ['1958', '1962', '1965', '1970'] } });
+    tick();
+    harness.detectChanges();
+    const choices = Array.from(screen().querySelectorAll<HTMLButtonElement>('.fdy__choice'));
+    expect(choices.map(choice => choice.textContent?.trim())).toEqual(['1958', '1962', '1965', '1970']);
+    choices[1].click();
+    const answer = http.expectOne(r => r.url.endsWith('/find/daily/answer'));
+    expect(answer.request.body).toEqual(jasmine.objectContaining({ date: '2026-11-17', choice: 1 }));
+    answer.flush({ success: true, daily: { ...base, status: 'answered', searches: 1, choices: ['1958', '1962', '1965', '1970'],
+      result: { choice: 1, correct: true, answerIndex: 1, points: 100, beat: 72, explanation: 'It opened in 1962.', sourceUrl: 'https://www.spaceneedle.com/history', sourceTitle: 'History' } } });
+    tick();
+    harness.detectChanges();
+    expect(screen().textContent).toContain('Right!');
+    expect(screen().textContent).toContain('100');
+    expect(screen().textContent).toContain('You beat 72% of Finders today.');
+  }));
+
+  it('crews: the board ranks this week, and an invite link joins (2026-11-17)', fakeAsync(() => {
+    byLabel('Awards').click();
+    http.expectOne(r => r.url.endsWith('/find/score/profile')).flush({ success: true, profile: makeProfile({ weekTop: 10, badges: [
+      { id: 'seen-them-all', group: 'cards', title: 'Seen Them All', copy: 'x', icon: 'all-cards', state: 'earned', rarity: 2.5, rare: true },
+    ] }) });
+    tick();
+    harness.detectChanges();
+    http.expectOne(r => r.url.endsWith('/find/crews')).flush({ success: true, crews: [{
+      code: 'K7M3QX', name: 'Family', inviteUrl: 'https://find.16ahead.com/?crew=K7M3QX', isOwner: true, week: '2026-11-16',
+      members: [
+        { place: 1, nickname: 'Vikki', publicCode: 'AAAAAAAA', you: false, weekScore: 340, score: 2140, rank: 'Detective', streak: 18, dailyToday: 85 },
+        { place: 2, nickname: 'Ty', publicCode: 'BBBBBBBB', you: true, weekScore: 120, score: 412, rank: 'Tracker', streak: 4, dailyToday: null },
+      ] }] });
+    tick();
+    harness.detectChanges();
+    const screen = root().querySelector('.find-awards-screen')!;
+    const rows = Array.from(screen.querySelectorAll('.fcr__board li')).map(row => row.textContent?.replace(/\s+/g, ' ').trim());
+    expect(rows[0]).toContain('Vikki');
+    expect(rows[0]).toContain('Daily 85');
+    expect(rows[0]).toContain('340');
+    expect(rows[1]).toContain('(you)');
+    expect(screen.textContent).toContain('Top 10% this week');
+    expect(screen.textContent).toContain('Rare');
+    expect(screen.textContent).toContain('2.5% of Finders');
+  }));
+
+  it('a slow search offers "Let me know when it\'s ready" and flags the tab when it finishes (2026-11-17)', fakeAsync(() => {
+    component.query = 'slow search';
+    harness.detectChanges();
+    submitButton().click();
+    tick();
+    const req = http.expectOne(r => r.url.endsWith('/find/search'));
+    tick(7000);
+    harness.detectChanges();
+    expect(root().querySelector('.find-ready__ask')).toBeNull();
+    tick(1500);
+    harness.detectChanges();
+    root().querySelector<HTMLButtonElement>('.find-ready__ask')!.click();
+    harness.detectChanges();
+    expect(root().querySelector('.find-ready')?.textContent).toContain('We’ll let you know');
+
+    spyOnProperty(document, 'hidden').and.returnValue(true);
+    const before = document.title;
+    req.flush(makeEntityResponse('slow search'));
+    tick();
+    harness.detectChanges();
+    drainSummarize();
+    expect(document.title).toBe('Ready: slow search · Find');
+    document.title = before;
   }));
 
   it('shows the awards progress from the Awards tab', fakeAsync(() => {

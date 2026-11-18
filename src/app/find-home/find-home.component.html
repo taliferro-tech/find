@@ -26,6 +26,22 @@
     </div>
     <p class="find-timer" *ngIf="isLoading">Searching for {{ liveElapsedSeconds }}s</p>
     <p class="find-timer" *ngIf="!isLoading && lastResponseMs > 0">Last response: {{ responseSeconds }}s</p>
+    <button type="button" class="find-rank-chip" *ngIf="scoreProfile as profile" (click)="setView('awards')" [attr.aria-label]="'Find Score: ' + profile.rank.name + ', ' + profile.score + ' points. Open Awards'">
+      <i class="fa-solid fa-award" aria-hidden="true"></i>
+      <span>{{ profile.rank.name }} · {{ profile.score | number }}</span>
+      <span class="find-rank-chip__streak" *ngIf="profile.streak.count > 1"><i class="fa-solid fa-fire" aria-hidden="true"></i> {{ profile.streak.count }}</span>
+    </button>
+    <div class="find-crew-invite" *ngIf="crewInvite as invite" role="dialog" aria-label="Crew invite">
+      <span>Join <strong>“{{ invite.name }}”</strong> on Find? <small>{{ invite.memberCount }} {{ invite.memberCount === 1 ? 'person' : 'people' }} · see who scores more this week</small></span>
+      <button type="button" class="find-crew-invite__join" (click)="joinInvitedCrew()">Join</button>
+      <button type="button" class="find-crew-invite__later" (click)="crewInvite = null">Not now</button>
+    </div>
+    <p class="find-error" *ngIf="crewInviteMessage && activeView === 'search'">{{ crewInviteMessage }}</p>
+    <button type="button" class="find-daily-entry" (click)="setView('daily')">
+      <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+      <span><strong>Daily Find</strong> <small>Today’s question for everyone</small></span>
+      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+    </button>
     <p class="find-error" *ngIf="errorMessage">{{ errorMessage }}</p>
     <a class="find-app-store-badge" href="https://apps.apple.com/us/app/taliferro-find/id6806954591" target="_blank" rel="noopener noreferrer" aria-label="Download Find on the App Store">
       <i class="fa-brands fa-apple" aria-hidden="true"></i>
@@ -94,9 +110,15 @@
     <div class="find-result-loading" *ngIf="isLoading && !showEntityCard">
       <span class="find-spinner find-spinner--lg" aria-hidden="true"></span>
       <p role="status">{{ searchStageText }} {{ liveElapsedSeconds }}s</p>
+      <ng-container *ngTemplateOutlet="readyNotice"></ng-container>
     </div>
     <!-- Shown once result is available -->
     <ng-container *ngIf="result && !isLoading && !showEntityCard">
+      <!-- Daily Find: back to today's question while playing it. -->
+      <button type="button" class="find-daily-banner" *ngIf="dailyService.playingDate" (click)="setView('daily')">
+        <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+        <span>Daily Find: found it? <strong>Answer</strong></span>
+      </button>
       <!-- Pager: Back/Previous | progress segments + "N of M · See all" | Next -->
       <nav class="find-pager" aria-label="Results">
         <button type="button" class="find-pager__link find-pager__link--prev" (click)="onPreviousResult()" [attr.aria-label]="pagerPrevious.label + ': ' + pagerPrevious.title">
@@ -134,6 +156,7 @@
         <span class="find-spinner" aria-hidden="true"></span>
         {{ searchStageText }} {{ liveElapsedSeconds }}s
       </p>
+      <ng-container *ngIf="isRefining"><ng-container *ngTemplateOutlet="readyNotice"></ng-container></ng-container>
       <div class="find-body">
         <!-- ── WEATHER ── -->
         <ng-container *ngIf="isWeatherMode; else nonWeatherView">
@@ -399,8 +422,9 @@
             <span class="find-footer__prompt">Right find?</span>
             <button type="button" class="find-footer__pill" *ngFor="let rating of feedbackRatings" (click)="sendFeedback(rating.value)">{{ rating.label }}</button>
           </ng-container>
-          <ng-template #feedbackThanks><span class="find-footer__prompt">Thanks for the feedback.</span></ng-template>
+          <ng-template #feedbackThanks><span class="find-footer__prompt">Thanks for the feedback.<ng-container *ngIf="feedbackPoints > 0"> +{{ feedbackPoints }} points</ng-container></span></ng-template>
         </ng-container>
+        <button type="button" class="find-footer__points" *ngIf="resultPoints > 0" (click)="setView('awards')">+{{ resultPoints }} points</button>
         <span class="find-footer__meta">
           <ng-container *ngIf="isWeatherMode; else conversionMeta">
             <ng-container *ngIf="result.weather?.updatedAt">Updated {{ result.weather?.updatedAt | date:'shortTime' }}</ng-container>
@@ -654,6 +678,22 @@
          where it competed with the search. -->
     <app-site-footer><a href="/guides">Guides</a><a routerLink="/help">Help</a><a routerLink="/about">About</a></app-site-footer>
   </div>
+  <!-- "Let me know when it's ready" on a slow search -->
+  <ng-template #readyNotice>
+    <p class="find-ready" *ngIf="notifyOffer">
+      <button type="button" class="find-ready__ask" *ngIf="!notifyWhenReady; else readyAsked" (click)="requestReadyNotice()"><i class="fa-regular fa-bell" aria-hidden="true"></i> Let me know when it’s ready</button>
+      <ng-template #readyAsked><span role="status">We’ll let you know. Feel free to switch tabs.</span></ng-template>
+    </p>
+  </ng-template>
+  <!-- ── DAILY FIND VIEW ──────────────────────────────────────── -->
+  <div class="find-awards-screen" data-cy="find-daily-shell" *ngIf="activeView === 'daily'">
+    <div class="find-screen-header">
+      <button class="find-screen-header__back" type="button" (click)="resetToSearch()" aria-label="Home"><i class="fa-solid fa-house" aria-hidden="true"></i></button>
+      <h2>Daily Find</h2>
+      <span class="find-screen-header__spacer" aria-hidden="true"></span>
+    </div>
+    <app-find-daily (search)="runDailySearch($event)" (unlock)="onDailyUnlock($event)"></app-find-daily>
+  </div>
   <!-- ── AWARDS VIEW ──────────────────────────────────────────── -->
   <div class="find-awards-screen" data-cy="find-awards-shell" *ngIf="activeView === 'awards'">
     <div class="find-screen-header">
@@ -661,29 +701,88 @@
       <h2>Awards</h2>
       <span class="find-screen-header__spacer" aria-hidden="true"></span>
     </div>
-    <div class="find-awards-progress">
-      <div class="find-awards-progress__track">
-        <div class="find-awards-progress__fill" [style.width.%]="awardsProgress.percent"></div>
+    <!-- Find Score: rank, points, streak, nickname and sharing -->
+    <section class="find-score-card" *ngIf="scoreProfile as profile; else awardsOffline">
+      <div class="find-score-card__name">
+        <ng-container *ngIf="!editingNickname; else nicknameForm">
+          <strong>{{ profile.nickname }}</strong>
+          <button type="button" class="find-score-card__link" (click)="startNicknameEdit()">{{ profile.hasNickname ? 'Change name' : 'Pick a nickname' }}</button>
+        </ng-container>
+        <ng-template #nicknameForm>
+          <form class="find-score-card__nickname" (ngSubmit)="saveNickname()">
+            <input name="nickname" [(ngModel)]="nicknameDraft" maxlength="20" placeholder="Your nickname" aria-label="Nickname" autocomplete="nickname" />
+            <button type="submit" [disabled]="nicknameDraft.trim().length < 2">Save</button>
+            <button type="button" class="find-score-card__link" (click)="editingNickname = false">Cancel</button>
+          </form>
+          <p class="find-score-card__error" *ngIf="nicknameError" role="alert">{{ nicknameError }}</p>
+        </ng-template>
       </div>
-      <span class="find-awards-progress__label">{{ awardsProgress.unlockedCount }} of {{ awardsProgress.totalCount }} unlocked</span>
-    </div>
-    <div class="find-awards-grid">
-      <div class="find-awards-grid__item" *ngFor="let award of awards">
-        <app-award-badge [icon]="award.icon" [state]="award.state"></app-award-badge>
-        <span class="find-awards-grid__title" [class.find-awards-grid__title--dim]="award.state === 'locked'" [class.find-awards-grid__title--mystery]="award.state === 'mystery'">
-          {{ award.state === 'mystery' ? '— — —' : award.title }}
-        </span>
+      <div class="find-score-card__rank">
+        <span class="find-score-card__rank-name">{{ profile.rank.name }}</span>
+        <span class="find-score-card__points">{{ profile.score | number }} <small>points</small></span>
       </div>
-    </div>
+      <div class="find-awards-progress">
+        <div class="find-awards-progress__track">
+          <div class="find-awards-progress__fill" [style.width.%]="rankPercent"></div>
+        </div>
+        <span class="find-awards-progress__label" *ngIf="profile.rank.next as next; else topRank">{{ next.toGo | number }} to {{ next.name }}</span>
+        <ng-template #topRank><span class="find-awards-progress__label">Top rank</span></ng-template>
+      </div>
+      <div class="find-score-card__stats">
+        <span><i class="fa-solid fa-fire" aria-hidden="true"></i> {{ profile.streak.count }}-day streak</span>
+        <span>{{ profile.weekScore | number }} this week</span>
+        <span>{{ awardsProgress.unlockedCount }} of {{ awardsProgress.totalCount }} badges</span>
+        <span *ngIf="profile.weekTop">Top {{ profile.weekTop }}% this week</span>
+      </div>
+      <button type="button" class="find-score-card__share" (click)="shareScore()"><i class="fa-solid fa-arrow-up-from-bracket" aria-hidden="true"></i> Share my score</button>
+      <p class="find-score-card__hint" *ngIf="scoreShareMessage" role="status">{{ scoreShareMessage }}</p>
+    </section>
+    <ng-template #awardsOffline>
+      <div class="find-awards-progress">
+        <div class="find-awards-progress__track">
+          <div class="find-awards-progress__fill" [style.width.%]="awardsProgress.percent"></div>
+        </div>
+        <span class="find-awards-progress__label">{{ awardsProgress.unlockedCount }} of {{ awardsProgress.totalCount }} unlocked</span>
+      </div>
+    </ng-template>
+    <section class="find-awards-group" *ngFor="let group of awardGroups">
+      <h3 class="find-awards-group__title" *ngIf="awardGroups.length > 1">{{ group.title }}</h3>
+      <div class="find-awards-grid">
+        <div class="find-awards-grid__item" *ngFor="let award of group.awards" [attr.title]="award.state === 'locked' && award.goal ? award.goal : award.copy">
+          <app-award-badge [icon]="award.icon" [state]="award.state"></app-award-badge>
+          <span class="find-awards-grid__title" [class.find-awards-grid__title--dim]="award.state === 'locked'" [class.find-awards-grid__title--mystery]="award.state === 'mystery'">
+            {{ award.state === 'mystery' ? '— — —' : award.title }}
+          </span>
+          <span class="find-awards-grid__goal" *ngIf="award.state === 'locked' && award.goal">{{ award.goal }}</span>
+          <span class="find-awards-grid__goal" *ngIf="award.state === 'unlocked' && award.rarity !== undefined"><b class="find-awards-rare" *ngIf="award.rare">Rare</b> {{ award.rarity }}% of Finders</span>
+        </div>
+      </div>
+    </section>
+    <p class="find-score-card__hint" *ngIf="crewInviteMessage" role="status">{{ crewInviteMessage }}</p>
+    <app-find-crews *ngIf="scoreProfile"></app-find-crews>
+    <!-- Moving to a new phone or browser: a six-word code carries the score. -->
+    <section class="find-score-recovery" *ngIf="scoreProfile">
+      <h3>Moving to a new phone?</h3>
+      <p *ngIf="!recoveryCode">Your score lives on this device. Save your recovery code to take it with you.</p>
+      <button type="button" class="find-score-card__link" *ngIf="!recoveryCode" (click)="showRecoveryCode()">Show my recovery code</button>
+      <p class="find-score-recovery__code" *ngIf="recoveryCode">{{ recoveryCode }}</p>
+      <p *ngIf="recoveryCode">Write it down. Typing it on another device moves your score there.</p>
+      <button type="button" class="find-score-card__link" *ngIf="!recoveryOpen" (click)="recoveryOpen = true">I have a code</button>
+      <form class="find-score-card__nickname" *ngIf="recoveryOpen" (ngSubmit)="recoverScore()">
+        <input name="recovery" [(ngModel)]="recoveryInput" placeholder="six words" aria-label="Recovery code" autocomplete="off" autocapitalize="none" />
+        <button type="submit" [disabled]="!recoveryInput.trim()">Move score here</button>
+      </form>
+      <p class="find-score-card__hint" *ngIf="recoveryMessage" role="status">{{ recoveryMessage }}</p>
+    </section>
   </div>
   <!-- ── AWARD UNLOCK OVERLAY ─────────────────────────────────── -->
   <div class="find-award-unlock" *ngIf="pendingAwardUnlock as unlock">
     <div class="find-award-unlock__glow" aria-hidden="true"></div>
-    <span class="find-award-unlock__eyebrow">Award Unlocked</span>
+    <span class="find-award-unlock__eyebrow">{{ unlock.eyebrow || 'Award Unlocked' }}</span>
     <app-award-badge class="find-award-unlock__badge" [icon]="unlock.icon" state="unlocked" [size]="176"></app-award-badge>
     <h2 class="find-award-unlock__title">{{ unlock.title }}</h2>
     <p class="find-award-unlock__desc">&ldquo;{{ unlock.copy }}&rdquo;</p>
-    <span class="find-award-unlock__hint">{{ awardsProgress.unlockedCount }} of {{ awardsProgress.totalCount }} unlocked</span>
+    <span class="find-award-unlock__hint">{{ awardsProgress.unlockedCount }} of {{ awardsProgress.totalCount }} badges</span>
     <button type="button" class="find-award-unlock__continue" (click)="dismissAwardUnlock()">Continue</button>
   </div>
   <!-- ── BOTTOM BAR ───────────────────────────────────────────── -->

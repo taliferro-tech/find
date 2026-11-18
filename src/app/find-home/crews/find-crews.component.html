@@ -1,0 +1,35 @@
+<section class="fcr" aria-labelledby="fcr-title">
+  <h3 class="fcr__title" id="fcr-title">Friends</h3>
+  <p class="fcr__muted">Make a crew, invite people with its link, and see who scores more this week. Points start over every Monday.</p>
+
+  <p class="fcr__muted" *ngIf="loading">Loading your crews…</p>
+
+  <article class="fcr__crew" *ngFor="let crew of crews; trackBy: trackByCode">
+    <header class="fcr__crew-head">
+      <strong>{{ crew.name }}</strong>
+      <span class="fcr__code">Code {{ crew.code }}</span>
+    </header>
+    <ol class="fcr__board">
+      <li *ngFor="let member of crew.members" [class.fcr__me]="member.you">
+        <span class="fcr__place">{{ member.place }}</span>
+        <span class="fcr__name">{{ member.nickname }}<small *ngIf="member.you"> (you)</small><small>{{ member.rank }}<ng-container *ngIf="member.streak > 1"> · <i class="fa-solid fa-fire" aria-hidden="true"></i> {{ member.streak }}</ng-container><ng-container *ngIf="member.dailyToday !== null"> · Daily {{ member.dailyToday }}</ng-container></small></span>
+        <span class="fcr__points">{{ member.weekScore | number }}</span>
+      </li>
+    </ol>
+    <div class="fcr__actions">
+      <button type="button" class="fcr__primary" (click)="invite(crew)"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Invite</button>
+      <span class="fcr__muted" *ngIf="copied === crew.code" role="status">Link copied.</span>
+      <button type="button" class="fcr__link" (click)="leave(crew)">Leave</button>
+    </div>
+  </article>
+
+  <form class="fcr__form" (ngSubmit)="create()" *ngIf="!loading && crews.length < 5">
+    <input name="crewName" [(ngModel)]="newName" maxlength="30" placeholder="Name a new crew (Family, Book club…)" aria-label="New crew name" />
+    <button type="submit" [disabled]="creating || newName.trim().length < 2">Make crew</button>
+  </form>
+  <form class="fcr__form" (ngSubmit)="join()" *ngIf="!loading && crews.length < 5">
+    <input name="crewCode" [(ngModel)]="joinCode" maxlength="8" placeholder="Have a code?" aria-label="Crew code" autocapitalize="characters" autocomplete="off" />
+    <button type="submit" [disabled]="joining || !joinCode.trim()">Join</button>
+  </form>
+  <p class="fcr__muted" *ngIf="message" role="status">{{ message }}</p>
+</section>

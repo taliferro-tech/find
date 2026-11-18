@@ -529,6 +529,10 @@ export interface FindSearchResponse {
   selectedIndex: number;
   // True when the results are News/Sports headlines from the RSS snapshot.
   rssBacked?: boolean;
+  /** What this search earned (Find Score), when the backend recorded it. */
+  score?: FindScoreAward;
+  /** Daily Find: this search counted toward today's question. */
+  daily?: { date: string; searches: number };
   timings?: {
     totalMs: number;
     planMs: number;
@@ -537,6 +541,107 @@ export interface FindSearchResponse {
     candidateCount: number;
     enrichedCount: number;
   };
+}
+
+// ── Find Score (the backend awards every point; see findScore.service.js) ──
+export type FindScoreBadgeState = 'earned' | 'locked' | 'mystery';
+
+export interface FindScoreBadge {
+  id: string;
+  group: 'searches' | 'streaks' | 'cards' | 'daily';
+  title: string;
+  copy: string;
+  icon: string;
+  hidden?: boolean;
+  goal?: string;
+  state?: FindScoreBadgeState;
+  earnedAt?: number;
+  /** Share of active Finders holding it (once enough people play). */
+  rarity?: number;
+  rare?: boolean;
+}
+
+export interface FindRank {
+  name: string;
+  min: number;
+  level: number;
+  next: { name: string; min: number; toGo: number } | null;
+}
+
+/** What one search, rating or card earned. */
+export interface FindScoreAward {
+  points: number;
+  reasons: { reason: string; points: number }[];
+  total: number;
+  weekScore: number;
+  rank: FindRank;
+  rankUp: string | null;
+  streak: number;
+  usedFreeMiss?: boolean;
+  newBadges: FindScoreBadge[];
+}
+
+export interface FindScoreProfile {
+  nickname: string;
+  hasNickname: boolean;
+  publicCode: string;
+  score: number;
+  weekScore: number;
+  weekKey?: string;
+  rank: FindRank;
+  streak: { count: number; best: number; lastDay: string };
+  searchCount: number;
+  imported: boolean;
+  hasRecoveryCode: boolean;
+  shareUrl: string;
+  badges: FindScoreBadge[];
+  /** "Top 10% this week" (1, 5, 10 or 25), once enough people play. */
+  weekTop?: number | null;
+}
+
+/** A crew: a small private friends board (findCrews.service.js). */
+export interface FindCrewMember {
+  place: number;
+  nickname: string;
+  publicCode: string;
+  you: boolean;
+  weekScore: number;
+  score: number;
+  rank: string;
+  streak: number;
+  dailyToday: number | null;
+}
+
+export interface FindCrew {
+  code: string;
+  name: string;
+  inviteUrl: string;
+  isOwner: boolean;
+  week: string;
+  members: FindCrewMember[];
+}
+
+/** Today's Daily Find for this browser (findDaily.service.js). */
+export interface FindDailyState {
+  available: boolean;
+  date: string;
+  question?: string;
+  status?: 'new' | 'playing' | 'answered';
+  searches?: number;
+  /** Only after the first search. */
+  choices?: string[];
+  result?: {
+    choice: number;
+    correct: boolean;
+    answerIndex: number;
+    points: number;
+    beat: number | null;
+    explanation: string;
+    sourceUrl: string;
+    sourceTitle: string;
+  };
+  /** What answering earned (Find Score), on the answer reply only. */
+  score?: FindScoreAward;
 }
 
 /**
@@ -563,6 +668,7 @@ export class FindExperienceService {
     maxResults?: number;
     latitude?: number | null;
     longitude?: number | null;
+    dailyDate?: string | null;
   } ): Observable<FindSearchResponse> {
     const headers = new HttpHeaders().set( 'Authorization', `Bearer ${environment.apiKey}` );
     const body = this.searchBody( payload );
@@ -577,6 +683,7 @@ export class FindExperienceService {
     maxResults?: number;
     latitude?: number | null;
     longitude?: number | null;
+    dailyDate?: string | null;
   } ) {
     const postalCode = this.extractPostalCode( payload?.query );
     const hasCoordinates = Number.isFinite( payload?.latitude ) && Number.isFinite( payload?.longitude );
@@ -588,7 +695,11 @@ export class FindExperienceService {
       maxResults: Math.max( 1, Math.min( 16, Number( payload?.maxResults ) || 16 ) ),
       timeZone: this.userTimeZone(),
       // Answer types this app can show; the backend leaves them out for apps that can't.
-      features: [ 'instant', 'units' ]
+      features: [ 'instant', 'units' ],
+      // Find Score: the backend adds this browser's points for the search.
+      deviceId: this.deviceId,
+      // Daily Find: a search made while playing today's question.
+      ...( payload?.dailyDate ? { dailyDate: payload.dailyDate } : {} )
     };
     return body;
   }
@@ -651,9 +762,9 @@ export class FindExperienceService {
   }
 
   /** Is this query one thing (an NFL team, a store, a restaurant, a local service)? Answers before the search finishes. */
-  detectEntity ( query: string ): Observable<{ entity: FindEntity | null }> {
+  detectEntity ( query: string ): Observable<{ entity: FindEntity | null; score?: FindScoreAward }> {
     const headers = new HttpHeaders().set( 'Authorization', `Bearer ${environment.apiKey}` );
-    return this.postWithLocalFallback<{ entity: FindEntity | null }>( '/find/entity', { query }, { headers } );
+    return this.postWithLocalFallback<{ entity: FindEntity | null; score?: FindScoreAward }>( '/find/entity', { query, deviceId: this.deviceId, timeZone: this.userTimeZone() }, { headers } );
   }
 
   /** One section of a single-item card; each loads on its own so the card fills in as they arrive. */
@@ -676,7 +787,7 @@ export class FindExperienceService {
   /** A short find.taliferro.tech/s/<id> link that previews this result. */
   createShare ( payload: { query: string; title: string; summary?: string; url?: string; displayUrl?: string; imageUrl?: string } ): Observable<{ success: boolean; id: string; url: string }> {
     const headers = new HttpHeaders().set( 'Authorization', `Bearer ${environment.apiKey}` );
-    return this.postWithLocalFallback( '/find/share', payload, { headers } );
+    return this.postWithLocalFallback( '/find/share', { ...payload, deviceId: this.deviceId }, { headers } );
   }
 
   // --- Watch a find. No account: this browser keeps its own random id. ---
@@ -729,9 +840,82 @@ export class FindExperienceService {
     return this.watchPost( '/find/watches/renew', { id } );
   }
 
-  submitFeedback ( payload: FindFeedbackPayload ): Observable<{ success: boolean }> {
+  submitFeedback ( payload: FindFeedbackPayload ): Observable<{ success: boolean; score?: FindScoreAward }> {
     const headers = new HttpHeaders().set( 'Authorization', `Bearer ${environment.apiKey}` );
-    return this.postWithLocalFallback<{ success: boolean }>( '/find/feedback', payload, { headers } );
+    return this.postWithLocalFallback<{ success: boolean; score?: FindScoreAward }>( '/find/feedback', { ...payload, deviceId: this.deviceId, timeZone: this.userTimeZone() }, { headers } );
+  }
+
+  // --- Find Score. Every call is a POST so the device ID never lands in a URL. ---
+
+  private scorePost<T> ( path: string, body: Record<string, unknown> = {} ): Observable<T> {
+    return this.devicePost<T>( `/find/score/${ path }`, body );
+  }
+
+  private devicePost<T> ( path: string, body: Record<string, unknown> = {} ): Observable<T> {
+    const headers = new HttpHeaders().set( 'Authorization', `Bearer ${environment.apiKey}` );
+    return this.postWithLocalFallback<T>( path, { deviceId: this.deviceId, ...body }, { headers } );
+  }
+
+  scoreProfile (): Observable<{ success: boolean; profile: FindScoreProfile }> {
+    return this.scorePost( 'profile' );
+  }
+
+  setNickname ( nickname: string ): Observable<{ success: boolean; profile: FindScoreProfile }> {
+    return this.scorePost( 'nickname', { nickname } );
+  }
+
+  /** Hands the old on-device search count to the backend, once. */
+  importAwards ( count: number, badges: { id: string; title: string; icon: string }[] ): Observable<{ success: boolean; profile: FindScoreProfile; award: FindScoreAward }> {
+    return this.scorePost( 'import', { count, badges, timeZone: this.userTimeZone() } );
+  }
+
+  recoveryCode (): Observable<{ success: boolean; code: string }> {
+    return this.scorePost( 'recovery' );
+  }
+
+  recoverScore ( code: string ): Observable<{ success: boolean; profile: FindScoreProfile }> {
+    return this.scorePost( 'recover', { code } );
+  }
+
+  // --- Crews ---
+
+  crews (): Observable<{ success: boolean; crews: FindCrew[] }> {
+    return this.devicePost( '/find/crews', { timeZone: this.userTimeZone() } );
+  }
+
+  createCrew ( name: string ): Observable<{ success: boolean; crew: FindCrew }> {
+    return this.devicePost( '/find/crews/create', { name } );
+  }
+
+  previewCrew ( code: string ): Observable<{ success: boolean; crew: { code: string; name: string; memberCount: number } }> {
+    return this.devicePost( '/find/crews/preview', { code } );
+  }
+
+  joinCrew ( code: string ): Observable<{ success: boolean; crew: FindCrew }> {
+    return this.devicePost( '/find/crews/join', { code } );
+  }
+
+  leaveCrew ( code: string ): Observable<{ success: boolean }> {
+    return this.devicePost( '/find/crews/leave', { code } );
+  }
+
+  // --- Daily Find ---
+
+  dailyFind (): Observable<{ success: boolean; daily: FindDailyState }> {
+    return this.devicePost( '/find/daily', { timeZone: this.userTimeZone() } );
+  }
+
+  startDailyFind ( date: string ): Observable<{ success: boolean; daily: FindDailyState }> {
+    return this.devicePost( '/find/daily/start', { date, timeZone: this.userTimeZone() } );
+  }
+
+  answerDailyFind ( date: string, choice: number ): Observable<{ success: boolean; daily: FindDailyState }> {
+    return this.devicePost( '/find/daily/answer', { date, choice, timeZone: this.userTimeZone() } );
+  }
+
+  /** Someone opened a find this person shared (the share link's `ref`). */
+  shareOpened ( ref: string ): Observable<{ success: boolean }> {
+    return this.scorePost( 'share-opened', { ref } );
   }
 
   private postWithLocalFallback<T> ( path: string, body: unknown, options: { headers: HttpHeaders; } ): Observable<T> {

@@ -1,8 +1,12 @@
 import { Injectable } from '@angular/core';
+import { Observable, of } from 'rxjs';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
+import { FindExperienceService, FindRank, FindScoreAward, FindScoreBadge, FindScoreProfile } from './find-experience.service';
 
 export type FindAwardIcon =
   | 'rebel' | 'curious' | 'night-owl' | 'early-bird' | 'connector' | 'sharp-eye'
-  | 'explorer' | 'specialist' | 'relentless' | 'tastemaker' | 'legend';
+  | 'explorer' | 'specialist' | 'relentless' | 'tastemaker' | 'legend'
+  | 'streak' | 'collector' | 'all-cards' | 'rank' | 'daily';
 
 export type FindAwardState = 'unlocked' | 'locked' | 'mystery';
 
@@ -13,6 +17,13 @@ export interface FindAward {
   copy: string;
   icon: FindAwardIcon;
   hidden?: boolean;
+  group?: FindScoreBadge['group'];
+  goal?: string;
+  /** Shown above the title in the unlock overlay ("Award Unlocked", "New Rank"). */
+  eyebrow?: string;
+  /** Share of active Finders holding it ("12% of Finders"), once enough people play. */
+  rarity?: number;
+  rare?: boolean;
 }
 
 export interface FindAwardView extends FindAward {
@@ -27,6 +38,12 @@ export interface FindAwardsProgress {
   nextAward: ( FindAward & { searchesToGo: number } ) | null;
 }
 
+export interface FindAwardGroup {
+  id: FindScoreBadge['group'];
+  title: string;
+  awards: FindAwardView[];
+}
+
 interface UnlockedRecord {
   title: string;
   copy: string;
@@ -34,9 +51,14 @@ interface UnlockedRecord {
   unlockedAt: string;
 }
 
+const KNOWN_ICONS: FindAwardIcon[] = [ 'rebel', 'curious', 'night-owl', 'early-bird', 'connector', 'sharp-eye', 'explorer', 'specialist', 'relentless', 'tastemaker', 'legend', 'streak', 'collector', 'all-cards', 'rank', 'daily' ];
+const GROUP_TITLES: Record<FindScoreBadge['group'], string> = { searches: 'Searches', streaks: 'Streaks', cards: 'Cards', daily: 'Daily Find' };
+
+// The on-device ladder from before Find Score. It's still counted until the
+// backend has taken it over (imported), and shown when the backend can't be
+// reached, so nobody sees their awards vanish.
 // The Night Owl / Early Bird slot resolves to whichever title fits the
-// moment it's earned, then keeps that resolution forever — a user who
-// unlocks it at 2am shouldn't see it flip to "Early Bird" on a later visit.
+// moment it's earned, then keeps that resolution forever.
 const AWARD_LADDER: FindAward[] = [
   { id: 'rebel', title: 'The Rebel', threshold: 1, icon: 'rebel',
     copy: 'You don’t wait for permission — you go find it yourself.' },
@@ -64,36 +86,76 @@ const AWARD_LADDER: FindAward[] = [
 export class FindAwardsService {
   private readonly COUNT_KEY = 'find-awards-count';
   private readonly UNLOCKED_KEY = 'find-awards-unlocked';
+  private readonly PROFILE_KEY = 'find-score-profile';
 
   private count = 0;
   private unlocked = new Map<string, UnlockedRecord>();
+  private cachedProfile: FindScoreProfile | null = null;
+  private importChecked = false;
+  /** What the latest search, rating or card earned (for "+12" under a result). */
+  lastAward: FindScoreAward | null = null;
 
-  constructor () {
+  constructor ( private readonly findExperience: FindExperienceService ) {
     this.load();
   }
 
   get searchCount (): number {
-    return this.count;
+    return this.cachedProfile?.searchCount ?? this.count;
+  }
+
+  /** The Find Score profile as last seen (cached), or null before the first one. */
+  get profile (): FindScoreProfile | null {
+    return this.cachedProfile;
+  }
+
+  get rank (): FindRank | null {
+    return this.cachedProfile?.rank ?? null;
+  }
+
+  /** How far into the current rank, 0-100. */
+  get rankPercent (): number {
+    const rank = this.cachedProfile?.rank;
+    if ( !rank?.next ) return 100;
+    const span = rank.next.min - rank.min;
+    return span > 0 ? Math.round( ( ( this.cachedProfile!.score - rank.min ) / span ) * 100 ) : 100;
   }
 
   get awards (): FindAwardView[] {
+    if ( this.cachedProfile?.badges?.length ) {
+      return this.cachedProfile.badges.map( badge => this.toView( badge ) );
+    }
     return AWARD_LADDER.map( ( award ) => {
       const record = this.unlocked.get( award.id );
       if ( record ) {
-        return { ...award, title: record.title, copy: record.copy, state: 'unlocked' as const };
+        return { ...award, title: record.title, copy: record.copy, icon: record.icon, state: 'unlocked' as const };
       }
       return { ...award, state: ( award.hidden ? 'mystery' : 'locked' ) as FindAwardState };
     } );
   }
 
+  get groups (): FindAwardGroup[] {
+    const groups: FindAwardGroup[] = [];
+    for ( const award of this.awards ) {
+      const id = award.group || 'searches';
+      let group = groups.find( item => item.id === id );
+      if ( !group ) {
+        group = { id, title: GROUP_TITLES[id], awards: [] };
+        groups.push( group );
+      }
+      group.awards.push( award );
+    }
+    return groups;
+  }
+
   get progress (): FindAwardsProgress {
-    const trackable = AWARD_LADDER.filter( ( award ) => !award.hidden );
-    const unlockedCount = trackable.filter( ( award ) => this.unlocked.has( award.id ) ).length;
-    const nextLadderAward = trackable.find( ( award ) => !this.unlocked.has( award.id ) ) || null;
+    const awards = this.awards;
+    const trackable = awards.filter( ( award ) => !award.hidden );
+    const unlockedCount = trackable.filter( ( award ) => award.state === 'unlocked' ).length;
+    const nextLadderAward = this.cachedProfile ? null : AWARD_LADDER.filter( award => !award.hidden ).find( ( award ) => !this.unlocked.has( award.id ) ) || null;
     return {
-      count: this.count,
+      count: this.searchCount,
       unlockedCount,
-      totalCount: AWARD_LADDER.length,
+      totalCount: awards.length,
       percent: trackable.length ? Math.round( ( unlockedCount / trackable.length ) * 100 ) : 0,
       nextAward: nextLadderAward
         ? { ...nextLadderAward, searchesToGo: Math.max( 0, nextLadderAward.threshold - this.count ) }
@@ -101,8 +163,13 @@ export class FindAwardsService {
     };
   }
 
-  /** Call once per completed search. Returns the award that was just unlocked, or null. */
+  /**
+   * The old on-device count, for a search the backend didn't score (it
+   * couldn't be reached, or isn't scoring yet). Returns the award just
+   * unlocked, or null.
+   */
   recordSearch (): FindAward | null {
+    if ( this.cachedProfile?.imported ) return null;
     this.count += 1;
     this.save();
 
@@ -115,6 +182,84 @@ export class FindAwardsService {
     }
     if ( justUnlocked ) this.save();
     return justUnlocked;
+  }
+
+  /**
+   * Takes what a search, rating or card earned and returns what to show: a
+   * new rank first, then a new badge, else null. The first one each visit
+   * also loads the whole profile (and hands over the old on-device count).
+   */
+  applyAward ( award: FindScoreAward | null | undefined ): FindAward | null {
+    if ( !award ) return null;
+    this.lastAward = award;
+    const profile = this.cachedProfile;
+    if ( profile ) {
+      const earned = new Map( award.newBadges.map( badge => [ badge.id, badge ] ) );
+      this.setProfile( {
+        ...profile,
+        score: award.total,
+        weekScore: award.weekScore,
+        rank: award.rank,
+        streak: { ...profile.streak, count: award.streak, best: Math.max( profile.streak.best, award.streak ) },
+        badges: profile.badges.map( badge => earned.has( badge.id ) ? { ...badge, ...earned.get( badge.id ), state: 'earned' } : badge ),
+      } );
+    }
+    if ( !this.importChecked ) this.refresh().subscribe();
+    if ( award.rankUp ) {
+      return { id: `rank-${ award.rankUp }`, title: award.rankUp, threshold: 0, icon: 'rank', eyebrow: 'New Rank',
+        copy: award.rank.next ? `${ award.total.toLocaleString( 'en-US' ) } points. ${ award.rank.next.toGo.toLocaleString( 'en-US' ) } more to ${ award.rank.next.name }.` : `${ award.total.toLocaleString( 'en-US' ) } points. The top rank.` };
+    }
+    const badge = award.newBadges[0];
+    return badge ? this.toView( badge ) : null;
+  }
+
+  /** Loads the profile from the backend; the first time, hands over the old count. */
+  refresh (): Observable<FindScoreProfile | null> {
+    return this.findExperience.scoreProfile().pipe(
+      switchMap( ( { profile } ) => {
+        this.importChecked = true;
+        if ( profile.imported || this.count === 0 ) return of( profile );
+        const badges = [ ...this.unlocked.entries() ].map( ( [ id, record ] ) => ( { id, title: record.title, icon: record.icon } ) );
+        return this.findExperience.importAwards( this.count, badges ).pipe(
+          map( response => response.profile ),
+          catchError( () => of( profile ) ),
+        );
+      } ),
+      tap( profile => this.setProfile( profile ) ),
+      catchError( () => of( this.cachedProfile ) ),
+    );
+  }
+
+  setNickname ( nickname: string ): Observable<FindScoreProfile> {
+    return this.findExperience.setNickname( nickname ).pipe(
+      map( response => response.profile ),
+      tap( profile => this.setProfile( profile ) ),
+    );
+  }
+
+  recoveryCode (): Observable<string> {
+    return this.findExperience.recoveryCode().pipe( map( response => response.code ) );
+  }
+
+  recover ( code: string ): Observable<FindScoreProfile> {
+    return this.findExperience.recoverScore( code ).pipe(
+      map( response => response.profile ),
+      tap( profile => this.setProfile( profile ) ),
+    );
+  }
+
+  private toView ( badge: FindScoreBadge ): FindAwardView {
+    const icon = ( KNOWN_ICONS as string[] ).includes( badge.icon ) ? badge.icon as FindAwardIcon : 'collector';
+    const state: FindAwardState = badge.state === 'earned' || !badge.state ? 'unlocked' : badge.state === 'mystery' ? 'mystery' : 'locked';
+    return { id: badge.id, title: badge.title, copy: badge.copy, icon, threshold: 0, hidden: badge.hidden, group: badge.group, goal: badge.goal, state, rarity: badge.rarity, rare: badge.rare };
+  }
+
+  private setProfile ( profile: FindScoreProfile | null ): void {
+    if ( !profile ) return;
+    this.cachedProfile = profile;
+    try {
+      localStorage.setItem( this.PROFILE_KEY, JSON.stringify( profile ) );
+    } catch { /* ignore */ }
   }
 
   private resolveAward ( award: FindAward ): FindAward {
@@ -138,6 +283,12 @@ export class FindAwardsService {
       this.unlocked = new Map( Object.entries( parsed ) );
     } catch {
       this.unlocked = new Map();
+    }
+    try {
+      const raw = localStorage.getItem( this.PROFILE_KEY );
+      this.cachedProfile = raw ? JSON.parse( raw ) : null;
+    } catch {
+      this.cachedProfile = null;
     }
   }
 
