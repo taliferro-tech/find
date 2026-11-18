@@ -35,6 +35,7 @@
           <span class="fdy__points">{{ r.points }} <small>points</small></span>
         </div>
         <p class="fdy__beat" *ngIf="r.correct && r.beat !== null">You beat {{ r.beat }}% of Finders today.</p>
+        <p class="fdy__muted">You’ve played today’s Daily Find.</p>
         <div class="fdy__choices fdy__choices--done">
           <span class="fdy__choice" *ngFor="let choice of s.choices; let i = index" [class.fdy__choice--right]="i === r.answerIndex" [class.fdy__choice--picked]="i === r.choice && !r.correct">{{ choice }}</span>
         </div>

@@ -256,6 +256,10 @@
   font-size: 1.1rem;
 }
 
+.find-daily-entry--done > i:first-child {
+  color: #2e9d57;
+}
+
 .find-daily-entry span {
   flex: 1;
   min-width: 0;

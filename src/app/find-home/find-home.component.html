@@ -37,9 +37,15 @@
       <button type="button" class="find-crew-invite__later" (click)="crewInvite = null">Not now</button>
     </div>
     <p class="find-error" *ngIf="crewInviteMessage && activeView === 'search'">{{ crewInviteMessage }}</p>
-    <button type="button" class="find-daily-entry" (click)="setView('daily')">
-      <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
-      <span><strong>Daily Find</strong> <small>Today’s question for everyone</small></span>
+    <button type="button" class="find-daily-entry" [class.find-daily-entry--done]="dailyService.state?.status === 'answered'" (click)="setView('daily')">
+      <ng-container *ngIf="dailyService.state?.status === 'answered' && dailyService.state?.result as played; else dailyOpen">
+        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+        <span><strong>Daily Find</strong> <small>Played today · {{ played.points }} points. New question tomorrow.</small></span>
+      </ng-container>
+      <ng-template #dailyOpen>
+        <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+        <span><strong>Daily Find</strong> <small>Today’s question for everyone</small></span>
+      </ng-template>
       <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
     </button>
     <p class="find-error" *ngIf="errorMessage">{{ errorMessage }}</p>
