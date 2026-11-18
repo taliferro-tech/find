@@ -197,7 +197,7 @@ export interface FindMovieRatings {
 // team, a store, a restaurant, a local service, a 16Ahead Store shop, or
 // (round 5) a country, US state, city, movie, TV show, artist, album or song,
 // or a word to define ("define serendipity").
-export type FindEntityType = 'word' | 'sports' | 'store' | 'restaurant' | 'service' | 'shop' | 'country' | 'state' | 'city' | 'movie' | 'tv' | 'artist' | 'album' | 'song' | 'company' | 'product' | 'corporation' | 'item';
+export type FindEntityType = 'howto' | 'word' | 'sports' | 'store' | 'restaurant' | 'service' | 'shop' | 'country' | 'state' | 'city' | 'movie' | 'tv' | 'artist' | 'album' | 'song' | 'company' | 'product' | 'corporation' | 'item';
 export type FindSportsLeague = 'nfl' | 'nba' | 'mlb' | 'college-football' | 'mens-college-basketball';
 
 export interface FindEntity {
@@ -221,7 +221,51 @@ export interface FindEntity {
   tintFgDark?: string | null;
 }
 
-export type FindEntitySection = 'word' | 'team' | 'games' | 'leaders' | 'news' | 'summary' | 'place' | 'details' | 'sale' | 'shop' | 'region' | 'local' | 'todo' | 'title' | 'facts' | 'show' | 'apple' | 'overview' | 'market' | 'videos';
+export type FindEntitySection = 'answer' | 'video' | 'word' | 'team' | 'games' | 'leaders' | 'news' | 'summary' | 'place' | 'details' | 'sale' | 'shop' | 'region' | 'local' | 'todo' | 'title' | 'facts' | 'show' | 'apple' | 'overview' | 'market' | 'videos';
+
+/** Every card this app can draw; the backend sends nothing else (newer cards stay off older apps). */
+export const FIND_CARD_TYPES: FindEntityType[] = [ 'howto', 'word', 'sports', 'store', 'restaurant', 'service', 'shop', 'country', 'state', 'city', 'movie', 'tv', 'artist', 'album', 'song', 'company', 'product', 'corporation', 'item' ];
+
+/** How-to answer (design_handoff_find_howto_video): the answer first, then one video. */
+export interface FindHowToAnswer {
+  title: string;
+  category: 'recipe' | 'diy' | 'tech' | 'other';
+  facts: { label: string; value: string }[];
+  meta: string;
+  summary: { text: string; sources: { name: string; url: string }[] };
+  steps: { title: string; detail: string }[];
+  ingredients?: string[];
+  tools?: string[];
+  moreUrl: string;
+}
+
+export interface FindHowToVideo {
+  provider: 'youtube';
+  id: string;
+  title: string;
+  channel: string;
+  views: number;
+  durationSec: number;
+  duration: string;
+  thumbUrl: string;
+  chapters: { title: string; sec: number }[];
+}
+
+export interface FindHowToVideoSection {
+  video: FindHowToVideo | null;
+  /** The chapter (seconds) each step starts at, or null. */
+  stepChapters: ( number | null )[];
+  moreUrl: string;
+}
+
+/** A team's latest videos (design_handoff_find_team_videos), shown behind curtains in the team's colors. */
+export interface FindTeamVideos {
+  team: string;
+  league: string;
+  colors: { primary: string; accent: string };
+  moreUrl: string;
+  videos: { id: string; title: string; type: string | null; channel: string; publishedAt: string | null; durationSec: number; duration: string; embeddable: boolean }[];
+}
 
 /** A dictionary entry ("define <word>"), trimmed by the backend by fixed rules, never reworded. */
 export interface FindWordSection {
@@ -766,7 +810,7 @@ export class FindExperienceService {
   /** Is this query one thing (an NFL team, a store, a restaurant, a local service)? Answers before the search finishes. */
   detectEntity ( query: string ): Observable<{ entity: FindEntity | null; score?: FindScoreAward }> {
     const headers = new HttpHeaders().set( 'Authorization', `Bearer ${environment.apiKey}` );
-    return this.postWithLocalFallback<{ entity: FindEntity | null; score?: FindScoreAward }>( '/find/entity', { query, deviceId: this.deviceId, timeZone: this.userTimeZone() }, { headers } );
+    return this.postWithLocalFallback<{ entity: FindEntity | null; score?: FindScoreAward }>( '/find/entity', { query, deviceId: this.deviceId, timeZone: this.userTimeZone(), cardTypes: FIND_CARD_TYPES }, { headers } );
   }
 
   /** One section of a single-item card; each loads on its own so the card fills in as they arrive. */

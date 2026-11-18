@@ -1,0 +1,112 @@
+<section class="hc" data-cy="find-howto-card" [attr.aria-label]="answer?.title || entity.name">
+  <div class="ec-chips hc-pills">
+    <span class="ec-chip ec-chip--green">How-to</span>
+    <span class="ec-chip ec-chip--yellow" *ngIf="categoryLabel">{{ categoryLabel }}</span>
+    <span class="ec-chip ec-chip--pink" *ngIf="video?.video"><i class="fa-solid fa-play" aria-hidden="true"></i> Video</span>
+  </div>
+
+  <div class="hc-titlerow">
+    <div class="hc-titles">
+      <h1 class="ec-name hc-title">{{ answer?.title || entity.name }}</h1>
+      <p class="ec-meta hc-meta" *ngIf="answer; else metaSkeleton">{{ answer.meta }}</p>
+      <ng-template #metaSkeleton><span class="ec-skel ec-skel--meta" *ngIf="answer === undefined"></span></ng-template>
+    </div>
+    <ul class="hc-facts" *ngIf="answer?.facts?.length" aria-label="At a glance">
+      <li class="hc-fact" *ngFor="let fact of answer?.facts; trackBy: trackByIndex"><strong>{{ fact.value }}</strong> {{ fact.label }}</li>
+    </ul>
+  </div>
+
+  <p class="hc-missing" *ngIf="answer === null">Find couldn't put this answer together. More results has other guides.</p>
+
+  <div class="hc-grid" >
+    <!-- Left: summary, then the video -->
+    <div class="hc-col hc-col--main">
+      <div class="ec-skel ec-skel--summary" *ngIf="answer === undefined"></div>
+      <aside class="ec-summary hc-summary" *ngIf="answer" aria-label="16Ahead summary">
+        <span class="ec-summary__head">
+          <img class="brand-mark--light" src="assets/brand/products/svg/light/01-16ahead.svg" alt="" width="22" height="22" /><img class="brand-mark--dark" src="assets/brand/products/svg/dark/01-16ahead.svg" alt="" width="22" height="22" />
+          <strong>16Ahead summary</strong>
+          <span *ngIf="sourceLine">· {{ sourceLine }}</span>
+        </span>
+        <p class="ec-summary__text">{{ answer.summary.text }}</p>
+      </aside>
+
+      <!-- The video: thumbnail first, the player only after a tap -->
+      <div class="ec-skel hc-video hc-video--skel" *ngIf="video === undefined" aria-hidden="true"></div>
+      <ng-container *ngIf="video?.video as v">
+        <div class="hc-video" data-cy="find-howto-video">
+          <iframe #player *ngIf="embed as url; else poster" class="hc-video__media" [src]="url" [title]="v.title" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+          <ng-template #poster>
+            <button type="button" class="hc-video__poster" (click)="playAt(0)" [attr.aria-label]="'Play ' + v.title + ' on YouTube'">
+              <img class="hc-video__media" [src]="v.thumbUrl" alt="" loading="lazy" />
+              <span class="hc-video__shade" aria-hidden="true"></span>
+              <span class="hc-video__duration">{{ v.duration }}</span>
+              <span class="hc-video__play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
+              <span class="hc-video__caption">
+                <strong>{{ v.title }}</strong>
+                <span>YouTube · {{ v.channel }}<ng-container *ngIf="v.views"> · {{ views(v.views) }}</ng-container></span>
+              </span>
+            </button>
+          </ng-template>
+        </div>
+        <p class="hc-video__below">{{ v.title }} · {{ v.channel }}</p>
+        <div class="hc-chapters" *ngIf="v.chapters.length" role="group" aria-label="Jump to">
+          <span class="hc-label">Jump to</span>
+          <div class="hc-chapters__row">
+            <button type="button" class="hc-chapter" *ngFor="let chapter of v.chapters; trackBy: trackByIndex" [class.hc-chapter--on]="playing && activeSec === chapter.sec" (click)="playAt(chapter.sec)">
+              <strong>{{ chapter.title }}</strong> {{ clock(chapter.sec) }}
+            </button>
+          </div>
+        </div>
+        <p class="hc-attrib">{{ v.title }} · {{ v.channel }} · Plays on YouTube</p>
+      </ng-container>
+      <!-- No video: the steps sit under the summary. -->
+      <ng-container *ngIf="noVideo"><ng-container *ngTemplateOutlet="stepsBlock"></ng-container></ng-container>
+    </div>
+
+    <!-- Right: steps, ingredients or what you need, more videos -->
+    <div class="hc-col">
+      <ng-container *ngIf="!noVideo"><ng-container *ngTemplateOutlet="stepsBlock"></ng-container></ng-container>
+      <section class="hc-things" *ngIf="things.length" [attr.aria-label]="thingsTitle">
+        <h3 class="hc-label">{{ thingsTitle }}</h3>
+        <ul>
+          <li *ngFor="let thing of things; trackBy: trackByIndex">{{ thing }}</li>
+        </ul>
+      </section>
+
+      <section class="hc-novideo" *ngIf="noVideo && answer">
+        <h3 class="hc-label">Video</h3>
+        <p>We didn't find a video good enough to recommend for this one.</p>
+      </section>
+
+      <a class="hc-more-videos" *ngIf="moreUrl" [href]="moreUrl" target="_blank" rel="noopener noreferrer">
+        <i class="fa-brands fa-youtube" aria-hidden="true"></i> {{ moreLabel }} <span aria-hidden="true">↗</span>
+      </a>
+    </div>
+  </div>
+
+  <button type="button" class="ec-more" data-cy="find-entity-more" (click)="moreResults.emit()">
+    <span class="ec-more__label">More results for “{{ query }}”</span><span class="ec-more__count" *ngIf="moreCount">· {{ moreCount }}</span>
+    <span class="ec-more__circle" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
+  </button>
+</section>
+
+<ng-template #stepsBlock>
+  <div class="ec-skel ec-skel--list" *ngIf="answer === undefined"></div>
+  <section class="hc-steps" *ngIf="answer?.steps?.length" aria-label="Steps">
+    <h3 class="hc-label">Steps</h3>
+    <ol>
+      <li class="hc-step" *ngFor="let step of answer?.steps; let i = index; trackBy: trackByIndex" [class.hc-step--open]="openSteps.has(i)">
+        <span class="hc-step__dot" aria-hidden="true">{{ i + 1 }}</span>
+        <div class="hc-step__text">
+          <button type="button" class="hc-step__title" (click)="toggleStep(i)" [attr.aria-expanded]="openSteps.has(i)">{{ step.title }}</button>
+          <p class="hc-step__detail">{{ step.detail }}</p>
+        </div>
+        <button type="button" class="hc-stamp" *ngIf="stepChapter(i) !== null" (click)="playAt(stepChapter(i)!)" [attr.aria-label]="'Play ' + step.title + ' at ' + clock(stepChapter(i)!)">
+          <i class="fa-solid fa-play" aria-hidden="true"></i> {{ clock(stepChapter(i)!) }}
+        </button>
+      </li>
+    </ol>
+  </section>
+
+</ng-template>

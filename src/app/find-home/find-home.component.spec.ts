@@ -191,6 +191,12 @@ describe('FindHomeComponent', () => {
     for (const pending of http.match(r => r.url.endsWith('/find/crews'))) {
       if (!pending.cancelled) pending.flush({ success: true, crews: [] });
     }
+    // A team card's video row (loaded on its own): none unless a test says so.
+    for (let round = 0; round < 3; round++) {
+      for (const pending of http.match(r => r.url.endsWith('/find/entity/section') && r.body?.section === 'videos')) {
+        if (!pending.cancelled) pending.flush({ data: null });
+      }
+    }
     // The home screen asks for today's Daily Find (for "Played today"): none unless a test says so.
     // (A failed local-emulator call retries the hosted API, so flush until none are left.)
     for (let round = 0; round < 3; round++) {
