@@ -639,6 +639,8 @@ export interface FindDailyState {
     explanation: string;
     sourceUrl: string;
     sourceTitle: string;
+    /** A link whose preview shows this result (find.16ahead.com/d/<date>/<code>). */
+    shareUrl?: string;
   };
   /** What answering earned (Find Score), on the answer reply only. */
   score?: FindScoreAward;

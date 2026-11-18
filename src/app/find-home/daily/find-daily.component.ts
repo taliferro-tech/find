@@ -72,7 +72,8 @@ export class FindDailyComponent implements OnInit {
     const text = result.correct
       ? `I scored ${ result.points } on today’s Daily Find${ result.beat !== null ? ` and beat ${ result.beat }% of Finders` : '' }. Can you beat it?`
       : 'Today’s Daily Find got me. Can you get it?';
-    const url = 'https://find.16ahead.com/?daily=1';
+    // The /d/ link's preview shows the score and question (Messages keeps only the link).
+    const url = result.shareUrl || 'https://find.16ahead.com/?daily=1';
     try {
       if ( typeof navigator !== 'undefined' && navigator.share ) {
         await navigator.share( { title: 'Daily Find', text, url } );

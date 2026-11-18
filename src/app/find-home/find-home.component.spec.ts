@@ -191,8 +191,12 @@ describe('FindHomeComponent', () => {
     for (const pending of http.match(r => r.url.endsWith('/find/crews'))) {
       if (!pending.cancelled) pending.flush({ success: true, crews: [] });
     }
+    // The home screen asks for today's Daily Find (for "Played today"): none unless a test says so.
     // (A failed local-emulator call retries the hosted API, so flush until none are left.)
     for (let round = 0; round < 3; round++) {
+      for (const pending of http.match(r => r.url.endsWith('/find/daily'))) {
+        if (!pending.cancelled) pending.flush({ success: true, daily: { available: false, date: '2026-11-17' } });
+      }
       for (const pending of http.match(r => r.url.includes('/find/score/'))) {
         if (!pending.cancelled) pending.flush({ success: false }, { status: 503, statusText: 'Unavailable' });
       }
@@ -1503,7 +1507,7 @@ describe('FindHomeComponent', () => {
     const base = { available: true, date: '2026-11-17', question: 'What year did the Space Needle open?' };
     component.setView('daily');
     harness.detectChanges();
-    http.expectOne(r => r.url.endsWith('/find/daily')).flush({ success: true, daily: { ...base, status: 'new', searches: 0 } });
+    http.match(r => r.url.endsWith('/find/daily')).forEach(pending => pending.flush({ success: true, daily: { ...base, status: 'new', searches: 0 } }));
     tick();
     harness.detectChanges();
     const screen = () => root().querySelector('[data-cy="find-daily-shell"]')!;
@@ -1527,14 +1531,14 @@ describe('FindHomeComponent', () => {
     harness.detectChanges();
     drainSummarize();
     // The first counted search unlocks the choices.
-    http.expectOne(r => r.url.endsWith('/find/daily')).flush({ success: true, daily: { ...base, status: 'playing', searches: 1, choices: ['1958', '1962', '1965', '1970'] } });
+    http.match(r => r.url.endsWith('/find/daily')).forEach(pending => pending.flush({ success: true, daily: { ...base, status: 'playing', searches: 1, choices: ['1958', '1962', '1965', '1970'] } }));
     tick();
     harness.detectChanges();
     expect(root().querySelector('.find-daily-banner')).toBeTruthy();
 
     component.setView('daily');
     harness.detectChanges();
-    http.expectOne(r => r.url.endsWith('/find/daily')).flush({ success: true, daily: { ...base, status: 'playing', searches: 1, choices: ['1958', '1962', '1965', '1970'] } });
+    http.match(r => r.url.endsWith('/find/daily')).forEach(pending => pending.flush({ success: true, daily: { ...base, status: 'playing', searches: 1, choices: ['1958', '1962', '1965', '1970'] } }));
     tick();
     harness.detectChanges();
     const choices = Array.from(screen().querySelectorAll<HTMLButtonElement>('.fdy__choice'));
