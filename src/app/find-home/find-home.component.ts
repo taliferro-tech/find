@@ -1014,11 +1014,43 @@ export class FindHomeComponent implements OnInit, OnDestroy {
       this.locationDistancesNote = 'Location is blocked or unavailable. Allow it for this site in your browser settings, then try again.';
       return;
     }
+    this.addLocationDistances( card, position );
+  }
+
+  private addLocationDistances ( card: FindRankedResult, position: { latitude: number; longitude: number } ): void {
+    if ( !card.locations?.length ) return;
     card.locations = card.locations
       .map( location => Number.isFinite( location.latitude ) && Number.isFinite( location.longitude )
         ? { ...location, distance: `${ ( distanceMeters( position, location.latitude!, location.longitude! ) / 1609.34 ).toFixed( 1 ) } mi` }
         : location )
       .sort( ( a, b ) => parseFloat( a.distance || 'Infinity' ) - parseFloat( b.distance || 'Infinity' ) );
+  }
+
+  /**
+   * Distances without a tap, when the browser already lets Find use the
+   * location (or this session already has it). Never asks: someone who
+   * hasn't allowed it still gets "How far?", and the browser's prompt
+   * follows their tap.
+   */
+  private async fillLocationDistancesIfAllowed (): Promise<void> {
+    const cards = this.allCards.filter( card => ( card.locations?.length || 0 ) > 1
+      && !card.locations!.some( location => location.distance )
+      && card.locations!.some( location => Number.isFinite( location.latitude ) && Number.isFinite( location.longitude ) ) );
+    if ( !cards.length ) return;
+    if ( !this.lastKnownPosition && !( await this.locationAlreadyAllowed() ) ) return;
+    const position = await this.requestPosition();
+    if ( !position ) return;
+    cards.forEach( card => this.addLocationDistances( card, position ) );
+  }
+
+  private async locationAlreadyAllowed (): Promise<boolean> {
+    try {
+      if ( typeof navigator === 'undefined' || !navigator.permissions?.query ) return false;
+      const status = await navigator.permissions.query( { name: 'geolocation' as PermissionName } );
+      return status.state === 'granted';
+    } catch {
+      return false;
+    }
   }
 
   /** "Bonhomie Coffee Bar (at Labour Temple)" reads as "Labour Temple" under the business name. */
@@ -2268,6 +2300,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     this.selectedResultIndex = 0;
     this.resultIndex = 0;
     this.updateCards();
+    void this.fillLocationDistancesIfAllowed();
     this.highlightedPill = '';
     this.activeView = 'result';
   }
@@ -2295,6 +2328,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
         this.currentCard = this.allCards[stillThere];
       }
     }
+    void this.fillLocationDistancesIfAllowed();
     this.highlightedPill = '';
     this.activeView = 'result';
     this.saveToHistory( query );
