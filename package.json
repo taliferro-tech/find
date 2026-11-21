@@ -2,6 +2,7 @@
   "name": "find",
   "version": "2026.11.7-build.2",
   "scripts": {
+    "auth:ui": "npx google-artifactregistry-auth",
     "ng": "ng",
     "start": "ng serve",
     "prebuild": "node scripts/update-build-version.mjs",
@@ -29,7 +30,7 @@
     "@angular/router": "^19.0.0",
     "@angular/ssr": "^19.2.27",
     "@fortawesome/fontawesome-free": "^6.7.2",
-    "@taliferro/ui": "file:../../taliferro-ui",
+    "@taliferro/ui": "^1.0.0",
     "express": "^4.18.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
