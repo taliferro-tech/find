@@ -94,7 +94,7 @@ export interface FindWatch {
   query: string;
   url: string;
   title: string;
-  kind: 'price' | 'hours' | 'topic' | 'page';
+  kind: 'price' | 'hours' | 'topic' | 'page' | 'game';
   createdAt: number;
   expiresAt: number;
   expired: boolean;
@@ -103,7 +103,12 @@ export interface FindWatch {
   /** Changed since this device last opened its Watching list. */
   changed: boolean;
   current: string;
+  /** A game watch: which game and which alerts. */
+  game?: FindGameWatch;
 }
+
+export interface FindGameWatch { league: FindSportsLeague; eventId: string; alerts: FindGameAlerts }
+export interface FindGameAlerts { start: boolean; scores: boolean; final: boolean }
 
 /** A follow-up question about one result (POST /find/followup). */
 export interface FindFollowupResponse {
@@ -197,7 +202,7 @@ export interface FindMovieRatings {
 // team, a store, a restaurant, a local service, a 16Ahead Store shop, or
 // (round 5) a country, US state, city, movie, TV show, artist, album or song,
 // or a word to define ("define serendipity").
-export type FindEntityType = 'howto' | 'word' | 'sports' | 'store' | 'restaurant' | 'service' | 'shop' | 'country' | 'state' | 'city' | 'movie' | 'tv' | 'artist' | 'album' | 'song' | 'company' | 'product' | 'corporation' | 'item';
+export type FindEntityType = 'game' | 'howto' | 'word' | 'sports' | 'store' | 'restaurant' | 'service' | 'shop' | 'country' | 'state' | 'city' | 'movie' | 'tv' | 'artist' | 'album' | 'song' | 'company' | 'product' | 'corporation' | 'item';
 export type FindSportsLeague = 'nfl' | 'nba' | 'mlb' | 'college-football' | 'mens-college-basketball';
 
 export interface FindEntity {
@@ -221,10 +226,37 @@ export interface FindEntity {
   tintFgDark?: string | null;
 }
 
-export type FindEntitySection = 'answer' | 'video' | 'word' | 'team' | 'games' | 'leaders' | 'news' | 'summary' | 'place' | 'details' | 'sale' | 'shop' | 'region' | 'local' | 'todo' | 'title' | 'facts' | 'show' | 'apple' | 'overview' | 'market' | 'videos';
+export type FindEntitySection = 'game' | 'photos' | 'reviews' | 'dishes' | 'retail' | 'products' | 'answer' | 'video' | 'word' | 'team' | 'games' | 'leaders' | 'news' | 'summary' | 'place' | 'details' | 'sale' | 'shop' | 'region' | 'local' | 'todo' | 'title' | 'facts' | 'show' | 'apple' | 'overview' | 'market' | 'videos';
 
 /** Every card this app can draw; the backend sends nothing else (newer cards stay off older apps). */
-export const FIND_CARD_TYPES: FindEntityType[] = [ 'howto', 'word', 'sports', 'store', 'restaurant', 'service', 'shop', 'country', 'state', 'city', 'movie', 'tv', 'artist', 'album', 'song', 'company', 'product', 'corporation', 'item' ];
+export const FIND_CARD_TYPES: FindEntityType[] = [ 'game', 'howto', 'word', 'sports', 'store', 'restaurant', 'service', 'shop', 'country', 'state', 'city', 'movie', 'tv', 'artist', 'album', 'song', 'company', 'product', 'corporation', 'item' ];
+
+/** Game page (design_handoff_find_game_restaurant_retail, part A): one game from ESPN. */
+export type FindGameStatus = 'pre' | 'live' | 'final' | 'postponed';
+export interface FindGameTeam { id: string; abbr: string; name: string; shortName: string; record: string; color: string | null; rank: number | null; standing: string }
+export interface FindGameSection {
+  id: string;
+  league: FindSportsLeague;
+  leagueName: string;
+  round: string;
+  status: FindGameStatus;
+  statusDetail: string;
+  start: string | null;
+  tv: string;
+  venue: { name: string; city: string };
+  line: { spread: string; overUnder: string } | null;
+  away: FindGameTeam;
+  home: FindGameTeam;
+  score: { away: string; home: string } | null;
+  byPeriod: { word: string; count: number; away: ( string | null )[]; home: ( string | null )[] } | null;
+  live: { period: number | null; clock: string; detail: string; possession: 'home' | 'away' | null; downDistance: string; outs: number | null } | null;
+  plays: { teamAbbr: string; teamColor: string | null; title: string; detail: string; scoreAfter: string }[];
+  leaders: { name: string; teamAbbr: string; pos: string; category: string; line: string }[];
+  links: { gamecast: string; recap: string; boxscore: string; preview: string; tickets: string };
+  series: { label: string; record: string; games: { id: string; number: number; date: string; status: 'pre' | 'live' | 'final'; result: string; current: boolean }[] } | null;
+  past: { id: string; date: string; venue: string; result: string; recapUrl: string }[];
+  updatedAt: string;
+}
 
 /** How-to answer (design_handoff_find_howto_video): the answer first, then one video. */
 export interface FindHowToAnswer {
@@ -263,6 +295,10 @@ export interface FindTeamVideos {
   team: string;
   league: string;
   colors: { primary: string; accent: string };
+  /** A restaurant's food reviews: its own heading, line and curtain colours. */
+  heading?: string;
+  blurb?: string;
+  curtains?: { c1: string; c2: string; c3: string; gold: string };
   moreUrl: string;
   videos: { id: string; title: string; type: string | null; channel: string; publishedAt: string | null; durationSec: number; duration: string; embeddable: boolean }[];
 }
@@ -340,7 +376,7 @@ export interface FindLeaderRow { label: string; name: string; position: string; 
 export interface FindSportsLeadersSection { offense: FindLeaderRow[]; defense: FindLeaderRow[]; offenseTitle?: string; defenseTitle?: string }
 export interface FindNewsArticle { headline: string; description: string; published: string | null; url: string; imageUrl: string | null }
 export interface FindSportsNewsSection { articles: FindNewsArticle[] }
-export interface FindEntitySummary { text: string; sources: string[] }
+export interface FindEntitySummary { text: string; sources: string[]; kind?: 'preview' | 'summary' | 'recap' }
 
 /** A clip on a card: an MP4 (with an optional light-theme version) or a YouTube link. */
 export interface FindCardVideo { url: string; urlLight?: string; poster?: string; posterLight?: string; title: string; sub: string; duration: string }
@@ -522,6 +558,53 @@ export interface FindPlaceSection {
   serves: string[];
   about: string;
   photoUrl: string | null;
+  /** The richer restaurant and store pages (design_handoff_find_game_restaurant_retail). */
+  photos?: FindPlacePhoto[];
+  photoCount?: number;
+  priceRange?: string;
+  placeId?: string;
+}
+
+export interface FindPlacePhoto { url: string; author: string; authorUrl: string }
+export interface FindPlacePhotos { photos: FindPlacePhoto[]; mapsUrl: string }
+
+/** "What people say": Google's rating and reviews, grouped into themes by 16Ahead. */
+export interface FindReviewsSection {
+  rating: number | null;
+  count: number;
+  /** How many reviews the themes come from. */
+  grouped: number;
+  themes: { text: string; count: number; tone: 'green' | 'cyan' | 'pink' | 'yellow' | 'amber' }[];
+  quotes: { text: string; stars: number | null; date: string | null; author: string }[];
+  mapsUrl: string;
+}
+
+export interface FindDishesSection { dishes: { name: string; note: string; price: string }[]; menuUrl: string }
+
+export interface FindRetailSection {
+  knownFor: string;
+  madeIn: string;
+  prices: string;
+  returns: string;
+  shipsNationwide: boolean;
+  fitNote: string;
+  instagram: string;
+  shop: { name: string; slug: string; url: string } | null;
+}
+
+export interface FindProductsSection {
+  source: '16ahead' | 'website' | 'sale';
+  title: string;
+  total: number;
+  seeAllUrl: string;
+  products: { title: string; price: string; imageUrl: string | null; url: string; stock: string }[];
+}
+
+export interface FindAskResult {
+  count: number;
+  best: { title: string; price: string; imageUrl: string | null; url: string } | null;
+  searchUrl: string;
+  referral: { store: string; location: string; url: string; heading: string } | null;
 }
 
 export interface FindPlaceDetails {
@@ -820,6 +903,12 @@ export class FindExperienceService {
     return this.postWithLocalFallback<{ data: T | null }>( '/find/entity/section', body, { headers } );
   }
 
+  /** "Ask this store": the store's own 16Ahead Store search. */
+  askStore ( slug: string, query: string ): Observable<{ result: FindAskResult | null }> {
+    const headers = new HttpHeaders().set( 'Authorization', `Bearer ${environment.apiKey}` );
+    return this.postWithLocalFallback<{ result: FindAskResult | null }>( '/find/entity/ask', { slug, query }, { headers } );
+  }
+
   summarize ( payload: { query: string; url: string; title: string } ): Observable<{ answer: string; hours?: FindBusinessHours | null }> {
     const headers = new HttpHeaders().set( 'Authorization', `Bearer ${environment.apiKey}` );
     return this.postWithLocalFallback<{ answer: string; hours?: FindBusinessHours | null }>( '/find/summarize', payload, { headers } );
@@ -866,7 +955,7 @@ export class FindExperienceService {
     return this.postWithLocalFallback<T>( path, { deviceId: this.deviceId, ...body }, { headers } );
   }
 
-  createWatch ( payload: { query: string; url: string; title: string; queryType?: string; address?: string; phone?: string } ): Observable<{ success: boolean; watch: FindWatch }> {
+  createWatch ( payload: { query: string; url: string; title: string; queryType?: string; address?: string; phone?: string; game?: FindGameWatch } ): Observable<{ success: boolean; watch: FindWatch }> {
     return this.watchPost( '/find/watches', payload );
   }
 

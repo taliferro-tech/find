@@ -1,0 +1,281 @@
+/* design_handoff_find_game_restaurant_retail, part A (game page). Sizes and
+   radii from its README; colours are the shared Find tokens, so light and
+   dark both work. The live scoreboard is dark in both themes. */
+
+.gc {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 30px 30px 0;
+}
+
+.gc-title { display: flex; flex-direction: column; gap: 10px; }
+.gc-title .ec-chip { height: 28px; font-size: 13px; font-weight: 700; }
+.gc-title .ec-name { font-size: 44px; font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; }
+.gc-title .ec-meta { font-size: 15px; color: var(--muted); }
+
+.gc-chip--yellow { background: var(--t-yellow); color: var(--t-yellow-fg); }
+.gc-chip--red { background: var(--t-red); color: var(--t-red-fg); }
+.gc-chip--grey { background: var(--surface); color: var(--text); }
+
+.gc-missing { color: var(--muted); }
+
+/* ── Scoreboard ── */
+.gc-board {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 24px;
+  padding: 28px 30px;
+  border-radius: 30px;
+  background: var(--surface);
+  color: var(--text);
+}
+.gc-board--loading { height: 196px; border-radius: 30px; }
+
+.gc-board--live { background: #0f1115; color: #ffffff; }
+.gc-board--live .gc-team__record,
+.gc-board--live .gc-situation { color: rgba(255, 255, 255, 0.72); }
+.gc-board--live .gc-team__link { color: #b3a8ff; }
+
+.gc-team {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gc-team--home { justify-content: flex-end; text-align: right; }
+.gc-team:focus-visible { outline: 2px solid var(--t-violet-fg); outline-offset: 6px; border-radius: 12px; }
+.gc-team__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gc-team__name { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.gc-team__name small { font-size: 16px; color: var(--muted); }
+.gc-team__record { font-size: 14px; color: var(--muted); }
+.gc-team__link { font-size: 12px; font-weight: 700; color: #4f3bf0; }
+.gc-team:hover .gc-team__link { text-decoration: underline; }
+
+.gc-crest {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.25);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.gc-crest--small { width: 40px; height: 40px; font-size: 13px; }
+.gc-crest--long { font-size: 17px; letter-spacing: -0.04em; }
+.gc-crest--small.gc-crest--long { font-size: 10px; }
+
+.gc-middle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.gc-kickoff { font-size: 44px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; white-space: nowrap; }
+.gc-under { font-size: 15px; color: var(--muted); }
+.gc-score {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 76px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.gc-score--behind { opacity: 0.45; }
+.gc-score__dash { font-size: 40px; opacity: 0.45; }
+.gc-clock { font-size: 18px; font-weight: 700; }
+.gc-final { font-size: 15px; font-weight: 800; letter-spacing: 0.12em; }
+.gc-situation { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; }
+.gc-ball { display: inline-block; width: 16px; height: 10px; border-radius: 50%; background: #c9772d; }
+
+/* ── Series switcher ── */
+.gc-switcher {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 5px;
+  border-radius: 999px;
+  background: var(--surface);
+}
+.gc-switcher__tab {
+  height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.gc-switcher__tab--on { background: var(--bg); color: var(--text); box-shadow: 0 1px 4px rgba(15, 17, 21, 0.12); }
+.gc-note { margin: -14px 0 0; font-size: 13px; color: var(--muted); }
+
+/* ── Live row ── */
+.gc-live-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: -6px; }
+.gc-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 14px 0 10px;
+  border-radius: 999px;
+  background: #e5243b;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.gc-live-pill__dot { width: 10px; height: 10px; border-radius: 50%; background: #ffffff; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.35); }
+.gc-updated { font-size: 14px; color: var(--muted); }
+
+/* ── Columns ── */
+.gc-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 530px) minmax(0, 1fr);
+  gap: 34px;
+  align-items: start;
+}
+.gc-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+.gc-label {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.gc-card { padding: 22px 24px; border-radius: 26px; background: var(--surface); }
+.gc-card--outline { background: var(--bg); box-shadow: inset 0 0 0 2px var(--surface); }
+.gc-past { padding: 0; }
+.ec-row small.gc-inline { display: inline; margin: 0; font-size: 14px; }
+.gc-card .ec-row__left strong, .gc-past .ec-row__left strong { font-weight: 700; }
+.gc-link { flex: 0 0 auto; font-weight: 700; color: #4f3bf0; text-decoration: none; }
+.gc-link:hover { text-decoration: underline; }
+
+/* Watch this game / Alerts on */
+.gc-watch { padding: 22px 24px; border-radius: 26px; background: var(--t-violet); }
+.gc-watch__title { display: block; font-size: 20px; font-weight: 700; color: var(--t-violet-fg); }
+.gc-watch__text { margin: 4px 0 0; font-size: 15px; }
+.gc-watch__note { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+.gc-options { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.gc-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.gc-option--on { background: #4f3bf0; color: #ffffff; }
+.gc-option:disabled { opacity: 0.7; cursor: default; }
+
+/* Kickoff / TV / Venue / Line tiles */
+.gc-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.gc-tile { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 16px; background: var(--surface); min-width: 0; }
+.gc-tile span { font-size: 13px; color: var(--muted); }
+.gc-tile strong { font-size: 17px; font-weight: 700; overflow-wrap: anywhere; }
+
+/* Scoring plays */
+.gc-plays { padding: 22px 24px; border-radius: 26px; background: var(--bg); box-shadow: inset 0 0 0 2px var(--surface); }
+.gc-plays--plain { margin-top: -4px; }
+.gc-empty { color: var(--muted); }
+.gc-play { display: flex; align-items: center; gap: 14px; padding: 12px 0; }
+.gc-play + .gc-play { border-top: 1px solid var(--surface); }
+.gc-play__text { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.gc-play__text strong { font-size: 15px; font-weight: 700; }
+.gc-play__text small { font-size: 13px; color: var(--muted); }
+.gc-play__score { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gc-play--new { animation: gc-slide-in 0.45s ease-out; }
+@keyframes gc-slide-in {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Score by quarter */
+.gc-table-wrap { overflow-x: auto; }
+.gc-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.gc-table th, .gc-table td { padding: 10px 8px; text-align: center; }
+.gc-table thead th { font-size: 13px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--bg); }
+.gc-table th:first-child { text-align: left; padding-left: 12px; }
+.gc-table tbody th { font-weight: 700; }
+.gc-table tbody tr + tr { border-top: 1px solid var(--bg); }
+.gc-table__total { font-weight: 800; }
+
+.gc-arrow { font-size: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gc-play--new { animation: none; }
+}
+
+/* ── 1024: narrower left column ── */
+@media (max-width: 1100px) {
+  .gc-grid { grid-template-columns: minmax(0, 440px) minmax(0, 1fr); }
+  .gc-team__name { font-size: 22px; }
+  .gc-score { font-size: 64px; }
+}
+
+/* ── 768: one column; the scoreboard stays side by side ── */
+@media (max-width: 900px) {
+  .gc { padding: 24px 24px 0; }
+  .gc-grid { grid-template-columns: minmax(0, 1fr); }
+  .gc-board { gap: 14px; padding: 24px; }
+  .gc-crest { width: 56px; height: 56px; font-size: 18px; }
+  .gc-team { gap: 12px; }
+  .gc-team__name { font-size: 19px; }
+  .gc-score { font-size: 56px; gap: 12px; }
+  .gc-kickoff { font-size: 34px; }
+}
+
+/* ── iPhone: the middle goes on top, then one row per team ── */
+@media (max-width: 600px) {
+  .gc { padding: 18px 18px 0; gap: 20px; }
+  .gc-title .ec-name { font-size: 32px; }
+  .gc-board { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 24px 22px; }
+  .gc-middle { order: -1; }
+  .gc-team, .gc-team--home { justify-content: flex-start; text-align: left; }
+  .gc-team--home .gc-crest { order: -1; }
+  .gc-score { font-size: 64px; }
+  .gc-tiles { grid-template-columns: 1fr; }
+  .gc-switcher { border-radius: 22px; }
+  .gc-switcher__tab { height: auto; min-height: 40px; padding: 8px 14px; white-space: normal; text-align: left; font-size: 14px; }
+  .gc-plays, .gc-card, .gc-watch { padding: 20px; }
+}
+
+/* The game's actions are words, not icons: on a phone they wrap as pills. */
+@media (max-width: 600px) {
+  .gc .ec-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .gc .ec-action, .gc .ec-action:nth-child(n + 5) { display: inline-flex; flex-direction: row; height: 44px; padding: 0 16px; border-radius: 999px; font-size: 14px; }
+}
+
+@media (max-width: 900px) {
+  .gc-crest.gc-crest--long { font-size: 14px; }
+  .gc-crest--small.gc-crest--long { font-size: 10px; }
+}

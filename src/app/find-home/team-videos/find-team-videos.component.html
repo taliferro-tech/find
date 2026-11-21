@@ -1,9 +1,10 @@
-<section class="tv" *ngIf="row as r" [style]="colors" data-cy="find-team-videos" aria-label="Latest videos">
+<section class="tv" *ngIf="row as r" [style]="colors" data-cy="find-team-videos" [attr.aria-label]="r.heading || 'Latest videos'">
   <div class="tv-grid">
     <div class="tv-stagecol">
       <header class="tv-head tv-head--phone">
-        <h2>Latest videos</h2>
-        <p>The newest from the {{ r.team }}<ng-container *ngIf="r.league"> and the {{ r.league }}</ng-container> on YouTube.</p>
+        <h2>{{ r.heading || 'Latest videos' }}</h2>
+        <p *ngIf="r.blurb; else teamBlurbPhone">{{ r.blurb }}</p>
+        <ng-template #teamBlurbPhone><p>The newest from the {{ r.team }}<ng-container *ngIf="r.league"> and the {{ r.league }}</ng-container> on YouTube.</p></ng-template>
       </header>
 
       <!-- Main stage -->
@@ -46,8 +47,9 @@
     </div>
 
     <aside class="tv-side">
-      <h2>Latest videos</h2>
-      <p>The newest from the {{ r.team }}<ng-container *ngIf="r.league"> and the {{ r.league }}</ng-container> on YouTube.</p>
+      <h2>{{ r.heading || 'Latest videos' }}</h2>
+      <p *ngIf="r.blurb; else teamBlurb">{{ r.blurb }}</p>
+      <ng-template #teamBlurb><p>The newest from the {{ r.team }}<ng-container *ngIf="r.league"> and the {{ r.league }}</ng-container> on YouTube.</p></ng-template>
       <p *ngIf="smalls.length">Tap a video below the big screen to bring it up front.</p>
       <a class="tv-more" [href]="r.moreUrl" target="_blank" rel="noopener noreferrer">More on YouTube ↗</a>
     </aside>

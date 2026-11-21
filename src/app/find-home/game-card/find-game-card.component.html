@@ -1,0 +1,248 @@
+<section class="gc" data-cy="find-entity-card" [attr.aria-label]="title">
+  <!-- Title block -->
+  <div class="gc-title">
+    <div class="ec-chips">
+      <span class="ec-chip ec-chip--cyan">{{ entity.label }}</span>
+      <span class="ec-chip ec-chip--plain" *ngIf="game?.round">{{ game?.round }}</span>
+      <span class="ec-chip" *ngIf="stateChip as chip" [ngClass]="'gc-chip--' + chip.tone">{{ chip.text }}</span>
+      <span class="ec-chip ec-chip--violet" *ngIf="game?.series as series">{{ series.label }}</span>
+    </div>
+    <h1 class="ec-name">{{ title }}</h1>
+    <p class="ec-meta" *ngIf="metaItems.length; else metaSkeleton">
+      <span *ngFor="let item of metaItems; trackBy: trackByIndex">{{ item }}</span>
+    </p>
+    <ng-template #metaSkeleton><span class="ec-skel ec-skel--meta" *ngIf="game === undefined"></span></ng-template>
+  </div>
+
+  <div class="ec-skel gc-board--loading" *ngIf="game === undefined"></div>
+  <p class="gc-missing" *ngIf="game === null">Find couldn’t load this game from ESPN right now.</p>
+
+  <ng-container *ngIf="game as g">
+    <!-- Scoreboard -->
+    <div class="gc-board" [class.gc-board--live]="g.status === 'live'" [attr.aria-label]="'Scoreboard'">
+      <button type="button" class="gc-team gc-team--away" (click)="openTeam(g.away)" [attr.aria-label]="g.away.name + ' team card'">
+        <span class="gc-crest" [class.gc-crest--long]="g.away.abbr.length > 3" [ngStyle]="crestStyle(g.away)">{{ g.away.abbr }}</span>
+        <span class="gc-team__text">
+          <strong class="gc-team__name"><small *ngIf="g.away.rank">#{{ g.away.rank }} </small>{{ g.away.name }}</strong>
+          <span class="gc-team__record" *ngIf="g.away.record">{{ g.away.record }}</span>
+          <span class="gc-team__link">Team card ›</span>
+        </span>
+      </button>
+
+      <div class="gc-middle">
+        <ng-container *ngIf="g.score; else kickoff">
+          <div class="gc-score" [attr.aria-label]="g.away.abbr + ' ' + g.score.away + ', ' + g.home.abbr + ' ' + g.score.home">
+            <span [class.gc-score--behind]="isBehind('away')">{{ g.score.away }}</span>
+            <span class="gc-score__dash" aria-hidden="true">–</span>
+            <span [class.gc-score--behind]="isBehind('home')">{{ g.score.home }}</span>
+          </div>
+          <ng-container *ngIf="g.status === 'live'">
+            <strong class="gc-clock">{{ clockLine }}</strong>
+            <span class="gc-situation" *ngIf="possessionTeam || g.live?.downDistance">
+              <ng-container *ngIf="possessionTeam as team">{{ team.shortName }} ball <span class="gc-ball" *ngIf="g.league === 'nfl' || g.league === 'college-football'" aria-hidden="true"></span></ng-container>
+              {{ g.live?.downDistance }}
+            </span>
+          </ng-container>
+          <ng-container *ngIf="g.status !== 'live'">
+            <strong class="gc-final">{{ g.status === 'postponed' ? 'POSTPONED' : 'FINAL' }}</strong>
+            <span class="gc-under">{{ dayOf(g.start) }}<ng-container *ngIf="g.venue.name"> · {{ g.venue.name }}</ng-container></span>
+          </ng-container>
+        </ng-container>
+        <ng-template #kickoff>
+          <strong class="gc-kickoff">{{ timeOf(g.start) }}</strong>
+          <span class="gc-under">{{ dayOf(g.start) }}<ng-container *ngIf="g.tv"> · {{ g.tv }}</ng-container></span>
+        </ng-template>
+      </div>
+
+      <button type="button" class="gc-team gc-team--home" (click)="openTeam(g.home)" [attr.aria-label]="g.home.name + ' team card'">
+        <span class="gc-team__text">
+          <strong class="gc-team__name"><small *ngIf="g.home.rank">#{{ g.home.rank }} </small>{{ g.home.name }}</strong>
+          <span class="gc-team__record" *ngIf="g.home.record">{{ g.home.record }}</span>
+          <span class="gc-team__link">Team card ›</span>
+        </span>
+        <span class="gc-crest" [class.gc-crest--long]="g.home.abbr.length > 3" [ngStyle]="crestStyle(g.home)">{{ g.home.abbr }}</span>
+      </button>
+    </div>
+
+    <!-- Rivalry or series switcher -->
+    <ng-container *ngIf="g.series as series">
+      <div class="gc-switcher" role="tablist" aria-label="Games this season">
+        <button type="button" role="tab" class="gc-switcher__tab" *ngFor="let item of series.games; trackBy: trackByIndex"
+          [class.gc-switcher__tab--on]="item.id === eventId" [attr.aria-selected]="item.id === eventId" (click)="openSeriesGame(item.id)">{{ seriesTabLabel(item) }}</button>
+      </div>
+      <p class="gc-note">These teams play {{ series.games.length === 2 ? 'twice' : series.games.length + ' times' }} this season. Find opens the game that’s on, else the next one, else the most recent.</p>
+    </ng-container>
+
+    <!-- Live status row -->
+    <div class="gc-live-row" *ngIf="g.status === 'live'">
+      <span class="gc-live-pill"><span class="gc-live-pill__dot" aria-hidden="true"></span>LIVE</span>
+      <span class="gc-updated" aria-live="polite">{{ updatedText }}</span>
+    </div>
+
+    <div class="gc-grid">
+      <!-- Left column -->
+      <div class="gc-col">
+        <ng-container *ngIf="g.status === 'pre'">
+          <ng-container *ngTemplateOutlet="watchCard"></ng-container>
+          <div class="gc-tiles">
+            <div class="gc-tile" *ngIf="g.start"><span>{{ startWord === 'kickoff' ? 'Kickoff' : startWord === 'tip-off' ? 'Tip-off' : 'First pitch' }}</span><strong>{{ dayOf(g.start) }} · {{ timeOf(g.start) }}</strong></div>
+            <div class="gc-tile" *ngIf="g.tv"><span>TV</span><strong>{{ g.tv }}</strong></div>
+            <div class="gc-tile" *ngIf="venueText"><span>Venue</span><strong>{{ venueText }}</strong></div>
+            <div class="gc-tile" *ngIf="g.line as line"><span>Line</span><strong>{{ line.spread }}<ng-container *ngIf="line.overUnder"> · O/U {{ line.overUnder }}</ng-container></strong></div>
+          </div>
+        </ng-container>
+
+        <section class="gc-plays" *ngIf="g.status === 'live'" aria-label="Scoring plays">
+          <h3 class="gc-label">Scoring plays · latest first</h3>
+          <p class="gc-empty" *ngIf="!g.plays.length">No scoring yet.</p>
+          <div class="gc-play" *ngFor="let play of g.plays; trackBy: trackByTitle" [class.gc-play--new]="play.title === newPlayTitle">
+            <span class="gc-crest gc-crest--small" [class.gc-crest--long]="play.teamAbbr.length > 3" [ngStyle]="crestStyleFor(play.teamAbbr, play.teamColor)">{{ play.teamAbbr }}</span>
+            <span class="gc-play__text"><strong>{{ play.title }}</strong><small>{{ play.detail }}</small></span>
+            <strong class="gc-play__score">{{ play.scoreAfter }}</strong>
+          </div>
+        </section>
+
+        <ng-container *ngIf="g.status === 'final'">
+          <ng-container *ngTemplateOutlet="scoreTable"></ng-container>
+          <section class="gc-card" *ngIf="g.leaders.length" aria-label="Top players">
+            <h3 class="gc-label">Top players</h3>
+            <div class="ec-row" *ngFor="let row of g.leaders; trackBy: trackByIndex">
+              <span class="ec-row__left">{{ row.name }}<small>{{ row.teamAbbr }}<ng-container *ngIf="row.pos"> · {{ row.pos }}</ng-container> · {{ row.category }}</small></span>
+              <span class="ec-row__right">{{ row.line }}</span>
+            </div>
+          </section>
+        </ng-container>
+      </div>
+
+      <!-- Right column -->
+      <div class="gc-col">
+        <ng-container *ngIf="g.status === 'live'">
+          <ng-container *ngTemplateOutlet="scoreTable"></ng-container>
+        </ng-container>
+
+        <div class="ec-skel ec-skel--summary" *ngIf="summary === undefined"></div>
+        <aside class="ec-summary" *ngIf="summary" [attr.aria-label]="summaryTitle">
+          <span class="ec-summary__head">
+            <img class="brand-mark--light" src="assets/brand/products/svg/light/01-16ahead.svg" alt="" width="22" height="22" /><img class="brand-mark--dark" src="assets/brand/products/svg/dark/01-16ahead.svg" alt="" width="22" height="22" />
+            <strong>{{ summaryTitle }}</strong>
+            <span *ngIf="summary.sources.length">· {{ summary.sources.join(', ') }}</span>
+          </span>
+          <p class="ec-summary__text">{{ summary.text }}</p>
+        </aside>
+
+        <section class="gc-card" *ngIf="g.status === 'pre' && !g.series && recordRows.length" aria-label="Records">
+          <h3 class="gc-label">Records</h3>
+          <div class="ec-row" *ngFor="let team of recordRows; trackBy: trackByIndex">
+            <span class="ec-row__left"><strong>{{ team.shortName }}</strong><small *ngIf="team.standing" class="gc-inline"> · {{ team.standing }}</small></span>
+            <span class="ec-row__right">{{ team.record }}</span>
+          </div>
+        </section>
+
+        <section class="gc-card" *ngIf="g.series?.record" aria-label="Season series">
+          <h3 class="gc-label">Season series</h3>
+          <div class="ec-row">
+            <span class="ec-row__left"><strong>{{ g.series?.record }}</strong><small class="gc-inline"> · this season</small></span>
+            <a class="gc-link" *ngIf="seriesRecap as recap" [href]="recap.href" target="_blank" rel="noopener">{{ recap.label }} ›</a>
+          </div>
+        </section>
+
+        <div class="gc-watch" *ngIf="g.status === 'live'">
+          <strong class="gc-watch__title">Alerts on</strong>
+          <div class="gc-options">
+            <button type="button" class="gc-option" [class.gc-option--on]="alerts.final" [attr.aria-pressed]="alerts.final" [disabled]="alertBusy" (click)="toggleLiveAlert('final')"><i class="fa-solid fa-check" *ngIf="alerts.final" aria-hidden="true"></i> Final score</button>
+            <button type="button" class="gc-option" [class.gc-option--on]="alerts.scores" [attr.aria-pressed]="alerts.scores" [disabled]="alertBusy" (click)="toggleLiveAlert('scores')"><i class="fa-solid fa-check" *ngIf="alerts.scores" aria-hidden="true"></i> Every score</button>
+          </div>
+          <p class="gc-watch__note">{{ alertMessage || 'The Find app sends these as notifications; History shows them here.' }}</p>
+        </div>
+
+        <ng-container *ngIf="g.status === 'final' && g.past.length">
+          <ng-container *ngTemplateOutlet="pastMatchups; context: { $implicit: true }"></ng-container>
+        </ng-container>
+      </div>
+    </div>
+
+    <ng-container *ngIf="g.status === 'pre' && g.past.length">
+      <ng-container *ngTemplateOutlet="pastMatchups; context: { $implicit: false }"></ng-container>
+    </ng-container>
+
+    <div class="ec-action-row">
+      <div class="ec-actions" *ngIf="actions.length">
+        <ng-container *ngFor="let action of actions; trackBy: trackByIndex">
+          <a *ngIf="action.href" class="ec-action" [class.ec-action--primary]="action.primary" [href]="action.href" target="_blank" rel="noopener">
+            <span class="ec-action__label">{{ action.label }}</span><span class="ec-action__short" aria-hidden="true">{{ action.label }}</span>
+            <i class="fa-solid fa-arrow-up-right gc-arrow" *ngIf="action.external" aria-hidden="true"></i>
+          </a>
+          <button *ngIf="!action.href && action.run" type="button" class="ec-action" [class.ec-action--primary]="action.primary" (click)="action.run()">
+            <span class="ec-action__label">{{ action.label }}</span><span class="ec-action__short" aria-hidden="true">{{ action.label }}</span>
+          </button>
+        </ng-container>
+      </div>
+      <button type="button" class="ec-toggle" *ngIf="g.status !== 'pre' && g.plays.length && g.status !== 'live'" (click)="expanded = !expanded" [attr.aria-expanded]="expanded" aria-controls="gc-expanded">
+        {{ expanded ? 'Show less' : 'Show more' }}
+        <i class="fa-solid fa-chevron-down ec-chevron" [class.ec-chevron--open]="expanded" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <section class="gc-plays gc-plays--plain" id="gc-expanded" *ngIf="expanded && g.status === 'final'" aria-label="Scoring plays">
+      <h3 class="gc-label">Scoring plays</h3>
+      <div class="gc-play" *ngFor="let play of g.plays; trackBy: trackByTitle">
+        <span class="gc-crest gc-crest--small" [class.gc-crest--long]="play.teamAbbr.length > 3" [ngStyle]="crestStyleFor(play.teamAbbr, play.teamColor)">{{ play.teamAbbr }}</span>
+        <span class="gc-play__text"><strong>{{ play.title }}</strong><small>{{ play.detail }}</small></span>
+        <strong class="gc-play__score">{{ play.scoreAfter }}</strong>
+      </div>
+    </section>
+  </ng-container>
+
+  <button type="button" class="ec-more" data-cy="find-entity-more" (click)="moreResults.emit()">
+    <span class="ec-more__label">More results for “{{ query }}”</span><span class="ec-more__count" *ngIf="moreCount">· {{ moreCount }}</span>
+    <span class="ec-more__circle" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
+  </button>
+</section>
+
+<ng-template #watchCard>
+  <div class="gc-watch">
+    <strong class="gc-watch__title">Watch this game</strong>
+    <p class="gc-watch__text">We’ll tell you when it starts, or just send the final.</p>
+    <div class="gc-options" role="radiogroup" aria-label="Alerts for this game">
+      <button type="button" role="radio" class="gc-option" [class.gc-option--on]="alertChoice === 'start'" [attr.aria-checked]="alertChoice === 'start'" [disabled]="alertBusy" (click)="chooseAlert('start')"><i class="fa-solid fa-check" *ngIf="alertChoice === 'start'" aria-hidden="true"></i> Alert at {{ startWord }}</button>
+      <button type="button" role="radio" class="gc-option" [class.gc-option--on]="alertChoice === 'final'" [attr.aria-checked]="alertChoice === 'final'" [disabled]="alertBusy" (click)="chooseAlert('final')"><i class="fa-solid fa-check" *ngIf="alertChoice === 'final'" aria-hidden="true"></i> Final score only</button>
+      <button type="button" role="radio" class="gc-option" [class.gc-option--on]="alertChoice === 'both'" [attr.aria-checked]="alertChoice === 'both'" [disabled]="alertBusy" (click)="chooseAlert('both')"><i class="fa-solid fa-check" *ngIf="alertChoice === 'both'" aria-hidden="true"></i> Both</button>
+    </div>
+    <p class="gc-watch__note">{{ alertMessage || 'The Find app sends these as notifications; History shows them here.' }}</p>
+  </div>
+</ng-template>
+
+<ng-template #scoreTable>
+  <section class="gc-card" *ngIf="game?.byPeriod as table" [attr.aria-label]="scoreTableTitle">
+    <h3 class="gc-label">{{ scoreTableTitle }}</h3>
+    <div class="gc-table-wrap">
+      <table class="gc-table">
+        <thead>
+          <tr><th scope="col">Team</th><th scope="col" *ngFor="let index of periods; trackBy: trackByIndex">{{ periodLabel(index) }}</th><th scope="col">T</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">{{ game?.away?.abbr }}</th>
+            <td *ngFor="let index of periods; trackBy: trackByIndex">{{ table.away[index] ?? '–' }}</td>
+            <td class="gc-table__total">{{ game?.score?.away }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{{ game?.home?.abbr }}</th>
+            <td *ngFor="let index of periods; trackBy: trackByIndex">{{ table.home[index] ?? '–' }}</td>
+            <td class="gc-table__total">{{ game?.score?.home }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</ng-template>
+
+<ng-template #pastMatchups let-boxed>
+  <section [class.gc-card]="boxed" [class.gc-card--outline]="boxed" [class.gc-past]="!boxed" aria-label="Past matchups">
+    <h3 class="gc-label">Past matchups</h3>
+    <div class="ec-row" *ngFor="let past of game?.past; trackBy: trackByIndex">
+      <span class="ec-row__left"><strong>{{ past.result }}</strong><small class="gc-inline"> · {{ pastDate(past.date) }}<ng-container *ngIf="past.venue"> · {{ past.venue }}</ng-container></small></span>
+      <a class="gc-link" [href]="past.recapUrl" target="_blank" rel="noopener">Recap ›</a>
+    </div>
+  </section>
+</ng-template>

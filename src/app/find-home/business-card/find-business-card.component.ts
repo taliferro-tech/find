@@ -54,7 +54,7 @@ export class FindBusinessCardComponent implements OnChanges, OnDestroy {
   private subs: Subscription[] = [];
   private clock: ReturnType<typeof setInterval> | null = null;
 
-  constructor ( private readonly findExperienceService: FindExperienceService ) { }
+  constructor ( protected readonly findExperienceService: FindExperienceService ) { }
 
   ngOnChanges ( changes: SimpleChanges ): void {
     if ( ( changes[ 'entity' ] || changes[ 'position' ] ) && this.entity ) this.load();
@@ -71,16 +71,22 @@ export class FindBusinessCardComponent implements OnChanges, OnDestroy {
     this.openSections.clear();
     this.imageFailed = this.logoFailed = false;
     this.fetch<FindPlaceSection>( 'place', data => this.place = data );
-    this.fetch<FindPlaceDetails>( 'details', data => this.details = data );
+    if ( this.wants( 'details' ) ) this.fetch<FindPlaceDetails>( 'details', data => this.details = data );
+    else this.details = null;
     // A store's sale pages, each with its own Watch.
-    if ( this.entity.type === 'store' ) this.fetch<FindSaleSection>( 'sale', data => this.sale = data?.items?.length ? data : null );
+    if ( this.entity.type === 'store' && this.wants( 'sale' ) ) this.fetch<FindSaleSection>( 'sale', data => this.sale = data?.items?.length ? data : null );
     else this.sale = null;
     this.fetch<FindEntitySummary>( 'summary', data => this.summary = data?.text ? data : null );
     // "Closes in 12 min" counts down without a refresh.
     if ( this.isBrowser ) this.clock = setInterval( () => this.now = Date.now(), 60 * 1000 );
   }
 
-  private fetch<T> ( section: FindEntitySection, apply: ( data: T | null ) => void ): void {
+  /** The restaurant and store page (find-place-page) gets these its own way. */
+  protected wants ( _section: FindEntitySection ): boolean {
+    return true;
+  }
+
+  protected fetch<T> ( section: FindEntitySection, apply: ( data: T | null ) => void ): void {
     this.subs.push( this.findExperienceService.entitySection<T>( this.entity, section, this.position ).subscribe( {
       next: response => apply( response?.data ?? null ),
       error: () => apply( null ),
