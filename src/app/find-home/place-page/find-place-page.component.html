@@ -1,0 +1,170 @@
+<section class="pp" data-cy="find-entity-card" [attr.aria-label]="name">
+  <!-- Title block -->
+  <div class="pp-title">
+    <span class="pp-tile" [class.pp-tile--restaurant]="isRestaurant">
+      {{ initials }}
+    </span>
+    <div class="pp-title__text">
+      <div class="ec-chips">
+        <span class="ec-chip" [ngClass]="isRestaurant ? 'ec-chip--yellow' : 'ec-chip--pink'">{{ categoryChip }}</span>
+        <span class="ec-chip" *ngIf="openChip as chip" [ngClass]="'pp-chip--' + chip.tone">{{ chip.text }}</span>
+        <span class="ec-chip ec-chip--plain" *ngIf="isRestaurant && place?.priceLevel">{{ place?.priceLevel }}</span>
+        <span class="ec-chip ec-chip--violet" *ngIf="onStore">On 16Ahead Store</span>
+      </div>
+      <h1 class="ec-name">{{ name }}</h1>
+      <p class="ec-meta pp-meta" *ngIf="pageMeta.length; else metaLoading">
+        <span *ngFor="let item of pageMeta; let i = index; trackBy: trackByIndex" [class.pp-meta__strong]="item.startsWith('★')" [class.pp-meta__phone]="isRestaurant && item === nearest?.phone">{{ item }}</span>
+      </p>
+      <ng-template #metaLoading><span class="ec-skel ec-skel--meta" *ngIf="place === undefined"></span></ng-template>
+    </div>
+  </div>
+
+  <div class="pp-grid">
+    <!-- Left column -->
+    <div class="pp-col">
+      <div class="ec-skel pp-hero" *ngIf="place === undefined"></div>
+      <div class="pp-hero" *ngIf="hero as photo" [class.pp-hero--product]="!isRestaurant">
+        <img [src]="photo.url" [alt]="name" (error)="photoFailed(photo)" />
+        <button type="button" class="pp-hero__pill" (click)="openViewer(0)" *ngIf="(place?.photoCount || 0) > 1">See all {{ place?.photoCount }} photos</button>
+      </div>
+      <div class="pp-strip" *ngIf="strip.length">
+        <button type="button" class="pp-strip__item" *ngFor="let photo of strip; let i = index; trackBy: trackByIndex" (click)="openViewer(i + 1)" [attr.aria-label]="'Photo ' + (i + 2) + ' of ' + name">
+          <img [src]="photo.url" alt="" loading="lazy" (error)="photoFailed(photo)" />
+        </button>
+      </div>
+
+      <div class="ec-skel pp-visit--loading" *ngIf="place === undefined"></div>
+      <div class="pp-visit" [class.pp-visit--retail]="!isRestaurant" *ngIf="nearest">
+        <span class="pp-visit__label">{{ visitLabel }}</span>
+        <strong class="pp-visit__headline">{{ visitHeadline }}</strong>
+        <span class="pp-visit__line" *ngIf="visitLine">{{ visitLine }}</span>
+        <div class="pp-visit__tiles" *ngIf="visitTiles.length">
+          <div class="pp-visit__tile" *ngFor="let tile of visitTiles; trackBy: trackByIndex"><span>{{ tile.label }}</span><strong>{{ tile.value }}</strong></div>
+        </div>
+        <p class="pp-visit__also" *ngIf="place?.others?.length">Also nearby: <ng-container *ngFor="let other of place?.others?.slice(0, 2); let last = last">{{ street(other) }}, {{ other.city }} ({{ distanceText(other) }})<ng-container *ngIf="!last"> · </ng-container></ng-container></p>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="pp-col">
+      <div class="ec-skel ec-skel--summary" *ngIf="summary === undefined"></div>
+      <aside class="ec-summary" *ngIf="summary" aria-label="16Ahead summary">
+        <span class="ec-summary__head">
+          <img class="brand-mark--light" src="assets/brand/products/svg/light/01-16ahead.svg" alt="" width="22" height="22" /><img class="brand-mark--dark" src="assets/brand/products/svg/dark/01-16ahead.svg" alt="" width="22" height="22" />
+          <strong>16Ahead summary</strong>
+          <span *ngIf="summary.sources.length">· {{ summary.sources.join(', ') }}</span>
+        </span>
+        <p class="ec-summary__text">{{ summary.text }}<ng-container *ngIf="retail?.fitNote"> {{ retail?.fitNote }}.</ng-container></p>
+      </aside>
+
+      <!-- Restaurant: popular dishes and what it serves -->
+      <ng-container *ngIf="isRestaurant">
+        <div class="ec-skel ec-skel--list" *ngIf="dishes === undefined"></div>
+        <section *ngIf="dishes as d" aria-label="Popular dishes">
+          <h3 class="pp-label">Popular dishes</h3>
+          <div class="pp-dish" *ngFor="let dish of d.dishes; trackBy: trackByIndex">
+            <span class="pp-dish__img" aria-hidden="true"><i class="fa-solid fa-bowl-food"></i></span>
+            <span class="pp-dish__text"><strong>{{ dish.name }}</strong><small *ngIf="dish.note">{{ dish.note }}</small></span>
+            <span class="pp-dish__price" *ngIf="dish.price"><strong>{{ dish.price }}</strong><small>Menu</small></span>
+          </div>
+          <p class="pp-note">Picked from reviews and the menu. Prices may have changed.</p>
+        </section>
+        <section *ngIf="place?.serves?.length" aria-label="Serves">
+          <h3 class="pp-label">Serves</h3>
+          <div class="ec-chips"><span class="ec-chip ec-chip--plain" *ngFor="let item of place?.serves; trackBy: trackByIndex">{{ item }}</span></div>
+        </section>
+      </ng-container>
+
+      <!-- Store: quick facts, Ask this store, the referral -->
+      <ng-container *ngIf="!isRestaurant">
+        <div class="ec-skel pp-facts--loading" *ngIf="retail === undefined"></div>
+        <div class="pp-facts" *ngIf="quickFacts.length">
+          <div class="pp-fact" *ngFor="let fact of quickFacts; trackBy: trackByIndex"><span>{{ fact.label }}</span><strong>{{ fact.value }}</strong></div>
+        </div>
+
+        <section class="pp-ask" *ngIf="retail?.shop as shop" aria-label="Ask this store">
+          <h3 class="pp-label">Ask this store</h3>
+          <form class="pp-ask__form" (ngSubmit)="ask()">
+            <input type="search" name="askQuery" [(ngModel)]="askQuery" [placeholder]="'What are you looking for at ' + shop.name + '?'" [attr.aria-label]="'Search ' + shop.name" maxlength="200" />
+            <button type="submit" [disabled]="asking || !askQuery.trim()">{{ asking ? 'Finding…' : 'Find' }}</button>
+          </form>
+          <a class="pp-ask__result" *ngIf="askResult?.best as best" [href]="askResult?.searchUrl" target="_blank" rel="noopener">
+            <span class="pp-ask__thumb"><img *ngIf="best.imageUrl" [src]="best.imageUrl" alt="" /></span>
+            <span><strong>{{ askResult?.count }} match{{ askResult?.count === 1 ? '' : 'es' }} at {{ shop.name }}</strong><small>Best match: {{ best.title }}<ng-container *ngIf="best.price">, {{ best.price }}</ng-container></small></span>
+          </a>
+          <p class="pp-ask__none" *ngIf="askResult && !askResult.best && !askResult.referral">{{ shop.name }} doesn’t have that right now.</p>
+          <p class="pp-ask__none" *ngIf="askError">{{ askError }}</p>
+        </section>
+
+        <a class="pp-referral" *ngIf="askResult?.referral as referral" [href]="referral.url" target="_blank" rel="noopener">
+          <span class="pp-referral__trace" aria-hidden="true">
+            <strong>{{ retail?.shop?.name }}</strong><span class="pp-referral__line"><span class="pp-referral__dot"></span></span><strong>{{ referral.store }}</strong>
+          </span>
+          <span>Don’t see it here? {{ retail?.shop?.name }} sends you to {{ referral.store }}<ng-container *ngIf="referral.location"> in {{ referral.location }}</ng-container>, which carries it.</span>
+        </a>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- Store: Shop online -->
+  <div class="ec-skel pp-shop--loading" *ngIf="!isRestaurant && products === undefined"></div>
+  <section class="pp-shop" *ngIf="products as p" aria-label="Shop online">
+    <header class="pp-shop__head">
+      <h2>Shop online <small>{{ p.title }}</small></h2>
+      <a [href]="p.seeAllUrl" target="_blank" rel="noopener" *ngIf="p.total > p.products.length">See all {{ p.total }} ›</a>
+    </header>
+    <div class="pp-shop__row">
+      <a class="pp-product" *ngFor="let product of p.products; trackBy: trackByIndex" [href]="product.url" target="_blank" rel="noopener">
+        <span class="pp-product__img">
+          <img *ngIf="product.imageUrl" [src]="product.imageUrl" alt="" loading="lazy" />
+          <i *ngIf="!product.imageUrl" class="fa-solid fa-shirt" aria-hidden="true"></i>
+          <span class="pp-product__chip" *ngIf="stockChip(product.stock) as chip" [ngClass]="'pp-chip--' + chip.tone">{{ chip.text }}</span>
+        </span>
+        <strong>{{ product.title }}</strong>
+        <span *ngIf="product.price">{{ product.price }}</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- What people say -->
+  <div class="ec-skel pp-reviews--loading" *ngIf="reviews === undefined"></div>
+  <app-find-reviews-block *ngIf="reviews" [reviews]="reviews"></app-find-reviews-block>
+
+  <!-- Hours (no busy-times data: hours take the full width) -->
+  <section class="pp-hours" *ngIf="place?.hoursWeek?.length" aria-label="Hours">
+    <h3 class="pp-label">Hours</h3>
+    <div class="pp-hours__row" *ngFor="let day of place?.hoursWeek; let i = index; trackBy: trackByIndex" [class.pp-hours__row--today]="isToday(i)">
+      <span>{{ day.day.slice(0, 3) }}</span><span>{{ compactHours(day.hours) }}</span>
+    </div>
+  </section>
+
+  <!-- Restaurant: food reviews behind warm red curtains -->
+  <app-find-team-videos *ngIf="isRestaurant" [entity]="entity"></app-find-team-videos>
+
+  <div class="ec-action-row">
+    <div class="ec-actions pp-actions" *ngIf="pageActions.length">
+      <a *ngFor="let action of pageActions; trackBy: trackByIndex" class="ec-action" [class.ec-action--primary]="action.primary" [href]="action.href" [attr.target]="action.external ? '_blank' : null" [attr.rel]="action.external ? 'noopener' : null">
+        <i [ngClass]="action.icon === 'fa-instagram' ? 'fa-brands fa-instagram' : 'fa-solid ' + action.icon" aria-hidden="true"></i>
+        <span class="ec-action__label">{{ action.label }}</span><span class="ec-action__short" aria-hidden="true">{{ action.label }}</span>
+      </a>
+    </div>
+  </div>
+
+  <button type="button" class="ec-more" data-cy="find-entity-more" (click)="moreResults.emit()">
+    <span class="ec-more__label">More results for “{{ query }}”</span><span class="ec-more__count" *ngIf="moreCount">· {{ moreCount }}</span>
+    <span class="ec-more__circle" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
+  </button>
+</section>
+
+<!-- Photo viewer -->
+<div class="pp-viewer" *ngIf="viewer as photos" role="dialog" aria-modal="true" [attr.aria-label]="'Photos of ' + name" (click)="closeViewer()">
+  <div class="pp-viewer__frame" (click)="$event.stopPropagation()">
+    <img *ngIf="photos[viewerIndex] as photo" [src]="photo.url" [alt]="'Photo ' + (viewerIndex + 1) + ' of ' + name" />
+    <p class="pp-viewer__credit" *ngIf="photos[viewerIndex] as shown">
+      <ng-container *ngIf="shown.author">Photo by <a *ngIf="shown.authorUrl; else plainAuthor" [href]="shown.authorUrl" target="_blank" rel="noopener">{{ shown.author }}</a><ng-template #plainAuthor>{{ shown.author }}</ng-template> · Google Maps · </ng-container>{{ viewerIndex + 1 }} of {{ photos.length }}<ng-container *ngIf="viewerLoading"> · loading more…</ng-container>
+    </p>
+    <button type="button" class="pp-viewer__nav pp-viewer__nav--prev" (click)="stepViewer(-1)" aria-label="Previous photo" *ngIf="photos.length > 1"><i class="fa-solid fa-chevron-left"></i></button>
+    <button type="button" class="pp-viewer__nav pp-viewer__nav--next" (click)="stepViewer(1)" aria-label="Next photo" *ngIf="photos.length > 1"><i class="fa-solid fa-chevron-right"></i></button>
+    <button type="button" class="pp-viewer__close" (click)="closeViewer()" aria-label="Close photos"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+</div>

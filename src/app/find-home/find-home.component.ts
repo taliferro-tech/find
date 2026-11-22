@@ -24,6 +24,8 @@ import { MarketStripComponent } from '../shared/market-strip/market-strip.compon
 import { FindEntityCardComponent } from './entity-card/find-entity-card.component';
 import { FindBusinessCardComponent } from './business-card/find-business-card.component';
 import { FindShopCardComponent } from './shop-card/find-shop-card.component';
+import { FindGameCardComponent } from './game-card/find-game-card.component';
+import { FindPlacePageComponent } from './place-page/find-place-page.component';
 import { FindWordCardComponent } from './word-card/find-word-card.component';
 import { FindHowToCardComponent } from './howto-card/find-howto-card.component';
 import { FindTeamVideosComponent } from './team-videos/find-team-videos.component';
@@ -75,7 +77,7 @@ function distanceMeters ( from: { latitude: number; longitude: number }, latitud
 @Component( {
   selector: 'app-find-home',
   standalone: true,
-  imports: [ FindEntityCardComponent, FindBusinessCardComponent, FindShopCardComponent, FindWordCardComponent, FindHowToCardComponent, FindTeamVideosComponent, FindRegionCardComponent, FindMediaCardComponent, FindMusicCardComponent, FindCompanyCardComponent, MarketStripComponent, AlsoFromUsComponent, SiteFooterComponent, CommonModule, FormsModule, RouterModule, FindSwipeDirective, PlatformMenuComponent, AwardBadgeComponent, FindWelcomeComponent, FindDailyComponent, FindCrewsComponent],
+  imports: [ FindGameCardComponent, FindPlacePageComponent, FindEntityCardComponent, FindBusinessCardComponent, FindShopCardComponent, FindWordCardComponent, FindHowToCardComponent, FindTeamVideosComponent, FindRegionCardComponent, FindMediaCardComponent, FindMusicCardComponent, FindCompanyCardComponent, MarketStripComponent, AlsoFromUsComponent, SiteFooterComponent, CommonModule, FormsModule, RouterModule, FindSwipeDirective, PlatformMenuComponent, AwardBadgeComponent, FindWelcomeComponent, FindDailyComponent, FindCrewsComponent],
   templateUrl: './find-home.component.html',
   styleUrls: ['./find-home.component.css', './find-home.grid.css', './find-home.features.css', './find-home.score.css'],
   // The prerendered "/" always contains the home screen, but a `?query=` or
@@ -658,10 +660,11 @@ export class FindHomeComponent implements OnInit, OnDestroy {
   }
 
   watchKindLabel ( watch: FindWatch ): string {
-    return { price: 'Price', hours: 'Hours', topic: 'New results', page: 'Page' }[watch.kind] || 'Watching';
+    return { price: 'Price', hours: 'Hours', topic: 'New results', page: 'Page', game: 'Game' }[watch.kind] || 'Watching';
   }
 
   watchStatus ( watch: FindWatch ): string {
+    if ( watch.kind === 'game' && watch.expired ) return watch.lastChange?.summary || 'Game over';
     if ( watch.expired ) return 'Watch ended';
     if ( watch.lastChange ) return `${ watch.lastChange.summary } · ${ this.relativeTime( new Date( watch.lastChange.at ).toISOString() ) }`;
     if ( watch.lastCheckedAt ) return `No changes yet · checked ${ this.relativeTime( new Date( watch.lastCheckedAt ).toISOString() ) }`;
@@ -673,6 +676,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
   }
 
   private watchCadence ( watch: FindWatch ): string {
+    if ( watch.kind === 'game' ) return 'every few minutes during the game';
     return watch.kind === 'hours' || watch.kind === 'page' ? 'twice a day' : 'every few hours';
   }
 
@@ -2164,6 +2168,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
   get entityFooterNote (): string {
     if ( this.entity?.type === 'word' ) return 'Definitions from Wiktionary · CC BY-SA';
     if ( this.entity?.type === 'sports' ) return 'Scores and stats from ESPN';
+    if ( this.entity?.type === 'game' ) return 'Schedule, scores and stats from ESPN';
     if ( this.entity?.type === 'shop' ) return 'Products and prices from 16Ahead Store';
     if ( this.entity?.type === 'company' || this.entity?.type === 'product' ) return 'Taliferro Tech · first-party listing';
     if ( this.entity?.type === 'corporation' ) return 'Facts from Wikidata and the SEC · market data from Yahoo Finance and Nasdaq';
@@ -2173,6 +2178,8 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     if ( this.entity?.type === 'tv' ) return 'Ratings via OMDb · episodes from TVmaze';
     if ( this.entity?.type === 'artist' && this.entity.id.startsWith( 'tm.' ) ) return 'A Taliferro Music artist';
     if ( this.entity?.type === 'artist' || this.entity?.type === 'album' || this.entity?.type === 'song' ) return 'Facts from Wikidata · tracks and previews from Apple Music';
+    if ( this.entity?.type === 'restaurant' ) return 'Hours, photos and reviews from Google · videos from YouTube';
+    if ( this.entity?.type === 'store' ) return 'Hours, photos and reviews from Google · products from the store';
     return 'Hours, locations and ratings from Google';
   }
 

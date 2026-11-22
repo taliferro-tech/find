@@ -122,7 +122,8 @@ export class FindTeamVideosComponent implements OnChanges, OnDestroy {
     if ( !this.row ) return;
     this.mainIndex = 0;
     this.smalls = this.row.videos.slice( 1, 3 ).map( ( _, i ) => i + 1 );
-    this.colors = curtainColors( this.row.colors.primary, this.row.colors.accent );
+    const curtains = this.row.curtains;
+    this.colors = curtains ? { '--c1': curtains.c1, '--c2': curtains.c2, '--c3': curtains.c3, '--gold': curtains.gold } : curtainColors( this.row.colors.primary, this.row.colors.accent );
   }
 
   private reset (): void {
