@@ -306,9 +306,9 @@
         <ng-template #mediaView>
           <div class="find-media" [ngClass]="'find-media--' + imageState" [class.find-media--headline]="isHeadlineMode" [class.find-media--movie]="isMovieMode">
             <a class="find-media__hero" *ngIf="imageState === 'own'" [attr.href]="currentCard?.url || null" target="_blank" rel="noopener">
-              <img [src]="currentOwnImage" [alt]="isMovieMode ? (movieRatings?.title || '') : currentQuestionTitle" (error)="onImageError(currentOwnImage)" />
+              <img [src]="currentOwnImage" [alt]="isMovieMode ? (movieRatings?.title || '') : currentQuestionTitle" (load)="onImageLoad($event, currentOwnImage)" (error)="onImageError(currentOwnImage)" />
             </a>
-            <img class="find-media__thumb" *ngIf="imageState === 'fallback'" [src]="currentFallbackImage" alt="" (error)="onImageError(currentFallbackImage)" />
+            <img class="find-media__thumb" *ngIf="imageState === 'fallback'" [src]="currentFallbackImage" alt="" (load)="onImageLoad($event, currentFallbackImage)" (error)="onImageError(currentFallbackImage)" />
             <div class="find-media__content">
               <!-- News / Sports headline -->
               <ng-container *ngIf="isHeadlineMode; else movieOrStandard">
@@ -587,7 +587,7 @@
       <div class="find-grid">
         <a *ngFor="let card of gridCards; let i = index" [href]="card.url" target="_blank" rel="noopener noreferrer" class="find-grid-card" [class.find-grid-card--current]="i === resultIndex" [class.find-grid-card--image]="card.imageUrl && !isImageBroken(card.imageUrl)">
           <div class="find-grid-card__media">
-            <img *ngIf="card.imageUrl && !isImageBroken(card.imageUrl); else sourcePlate" [src]="card.imageUrl" alt="" loading="lazy" (error)="onImageError(card.imageUrl)" />
+            <img *ngIf="card.imageUrl && !isImageBroken(card.imageUrl); else sourcePlate" [src]="card.imageUrl" alt="" loading="lazy" (load)="onImageLoad($event, card.imageUrl)" (error)="onImageError(card.imageUrl)" />
             <ng-template #sourcePlate>
               <div class="find-grid-card__plate" [ngClass]="'find-grid-card__plate--' + sourceTint(card.displayUrl)">
                 <span class="find-grid-card__kind" *ngIf="sourceKind(card) as kind">{{ kind }}</span>
@@ -611,7 +611,7 @@
               <b *ngIf="card.phone">{{ card.phone }}</b>
             </p>
           </div>
-          <img *ngIf="card.imageUrl && !isImageBroken(card.imageUrl)" class="find-grid-card__thumb" [src]="card.imageUrl" alt="" loading="lazy" (error)="onImageError(card.imageUrl)" />
+          <img *ngIf="card.imageUrl && !isImageBroken(card.imageUrl)" class="find-grid-card__thumb" [src]="card.imageUrl" alt="" loading="lazy" (load)="onImageLoad($event, card.imageUrl)" (error)="onImageError(card.imageUrl)" />
         </a>
       </div>
       <button type="button" class="find-load-more" *ngIf="hasMoreGridResults" (click)="loadMoreGridResults()">Load more ({{ totalResultCount - gridVisibleCount }} remaining)</button>

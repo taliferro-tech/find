@@ -252,6 +252,16 @@ describe('FindHomeComponent', () => {
     expect(page.querySelector('.find-refining')).toBeNull();
   }));
 
+  it('a 1x1 placeholder from a site that blocks embedding counts as a broken image (2026-11-21)', () => {
+    const url = 'https://images.example.com/photo.jpg';
+    const tiny = { target: { naturalWidth: 1, naturalHeight: 1 } } as unknown as Event;
+    const real = { target: { naturalWidth: 1200, naturalHeight: 630 } } as unknown as Event;
+    component.onImageLoad( real, url );
+    expect( component.isImageBroken( url ) ).toBeFalse();
+    component.onImageLoad( tiny, url );
+    expect( component.isImageBroken( url ) ).toBeTrue();
+  });
+
   it('a web address inside a summary stays on one line (2026-11-01)', () => {
     const summary = 'AETHER Apparel is a brand that offers high-quality clothing and accessories designed for outdoor adventures and everyday wear. Their collections include insulated and non-insulated jackets, mid and base layers, and a variety of apparel for both men and women. You can explore their latest offerings and shop directly on their website at https://aetherapparel.com/. New styles arrive every season.';
     const html = component.formatRichText(summary);
