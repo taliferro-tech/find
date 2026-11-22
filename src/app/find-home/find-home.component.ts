@@ -1467,6 +1467,15 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     if ( normalized ) this.brokenImageUrls.add( normalized );
   }
 
+  /**
+   * Some image servers answer a blocked request with a 1x1 placeholder instead
+   * of an error, which left an empty grey box. Treat those as broken too.
+   */
+  onImageLoad ( event: Event, url: string | null | undefined ): void {
+    const image = event.target as HTMLImageElement | null;
+    if ( image && image.naturalWidth > 0 && image.naturalWidth <= 2 && image.naturalHeight <= 2 ) this.onImageError( url );
+  }
+
   /** What a running search is doing, from the backend's own progress messages. */
   get searchStageText (): string {
     if ( this.searchStage === 'checking' && this.checkingPageCount > 0 ) {
