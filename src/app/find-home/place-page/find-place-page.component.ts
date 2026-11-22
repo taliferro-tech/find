@@ -94,6 +94,7 @@ export class FindPlacePageComponent extends FindBusinessCardComponent implements
   get pageMeta (): string[] {
     const place = this.place;
     if ( !place ) return [];
+    if ( !place.nearest ) return [ place.city || '', 'Shops online' ].filter( Boolean );
     const rating = place.rating ? [ `★ ${ place.rating.value.toFixed( 1 ) }`, `${ place.rating.count.toLocaleString() } reviews` ] : [];
     if ( this.isRestaurant ) return [ ...rating, [ this.street( place.nearest ), place.nearest.city ].filter( Boolean ).join( ', ' ), place.nearest.phone ].filter( Boolean );
     return [ ...rating, place.priceLevel, this.cityState( place.nearest ) ].filter( Boolean );
@@ -222,6 +223,11 @@ export class FindPlacePageComponent extends FindBusinessCardComponent implements
       retail.madeIn && { label: 'Made in', value: retail.madeIn },
       retail.prices && { label: 'Prices', value: retail.prices },
     ].filter( ( fact ): fact is { label: string; value: string } => !!fact );
+  }
+
+  /** A shop from our Store guides (Find's id is "listing:<its domain>"). */
+  get inGuides (): boolean {
+    return this.entity.id.startsWith( 'listing:' );
   }
 
   get onStore (): boolean {

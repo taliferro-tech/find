@@ -546,7 +546,8 @@ export interface FindPlaceLocation {
 }
 
 export interface FindPlaceSection {
-  nearest: FindPlaceLocation;
+  /** Null for an online-only shop from the Store guides (no Google Maps listing). */
+  nearest: FindPlaceLocation | null;
   others: FindPlaceLocation[];
   /** False when the visitor's position wasn't available: "nearest" is Google's pick. */
   usedPosition: boolean;
@@ -563,6 +564,10 @@ export interface FindPlaceSection {
   photoCount?: number;
   priceRange?: string;
   placeId?: string;
+  /** An online-only guide shop: its name, "Los Angeles, CA", and online: true. */
+  name?: string;
+  city?: string;
+  online?: boolean;
 }
 
 export interface FindPlacePhoto { url: string; author: string; authorUrl: string }
@@ -590,6 +595,8 @@ export interface FindRetailSection {
   fitNote: string;
   instagram: string;
   shop: { name: string; slug: string; url: string } | null;
+  /** A shop in the Store guides that hasn't joined 16Ahead Store yet. */
+  listing?: { wantUrl: string; claimUrl: string } | null;
 }
 
 export interface FindProductsSection {

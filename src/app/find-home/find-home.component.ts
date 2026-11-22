@@ -2220,6 +2220,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     if ( this.entity?.type === 'artist' && this.entity.id.startsWith( 'tm.' ) ) return 'A Taliferro Music artist';
     if ( this.entity?.type === 'artist' || this.entity?.type === 'album' || this.entity?.type === 'song' ) return 'Facts from Wikidata · tracks and previews from Apple Music';
     if ( this.entity?.type === 'restaurant' ) return 'Hours, photos and reviews from Google · videos from YouTube';
+    if ( this.entity?.type === 'store' && this.entity.id.startsWith( 'listing:' ) ) return 'A shop in the 16Ahead Store guides · hours, photos and reviews from Google when it has a storefront';
     if ( this.entity?.type === 'store' ) return 'Hours, photos and reviews from Google · products from the store';
     return 'Hours, locations and ratings from Google';
   }
