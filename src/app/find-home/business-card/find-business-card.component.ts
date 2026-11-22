@@ -193,8 +193,8 @@ export class FindBusinessCardComponent implements OnChanges, OnDestroy {
     return [
       place.rating ? `★ ${ place.rating.value.toFixed( 1 ) } (${ place.rating.count.toLocaleString() })` : '',
       place.priceLevel && this.entity.type === 'restaurant' ? place.priceLevel : '',
-      [ this.street( place.nearest ), place.nearest.city ].filter( Boolean ).join( ', ' ),
-      place.nearest.phone,
+      place.nearest ? [ this.street( place.nearest ), place.nearest.city ].filter( Boolean ).join( ', ' ) : place.city || '',
+      place.nearest?.phone || '',
     ].filter( Boolean );
   }
 
@@ -205,7 +205,7 @@ export class FindBusinessCardComponent implements OnChanges, OnDestroy {
     const firstPrice = this.details?.services?.find( service => service.price );
     return [
       place.rating ? { value: `★ ${ place.rating.value.toFixed( 1 ) }`, label: `(${ place.rating.count.toLocaleString() })` } : null,
-      place.nearest.distanceMi !== null ? { value: this.miles( place.nearest ), label: 'away' } : { value: place.nearest.city, label: '' },
+      !place.nearest ? { value: place.city || '', label: '' } : place.nearest.distanceMi !== null ? { value: this.miles( place.nearest ), label: 'away' } : { value: place.nearest.city, label: '' },
       this.entity.type === 'restaurant' && place.priceLevel ? { value: place.priceLevel, label: 'price' } : null,
       firstSale ? { value: firstSale.discount || firstSale.title, label: firstSale.discount ? firstSale.title : 'on sale' } : null,
       firstPrice ? { value: firstPrice.price, label: firstPrice.name } : null,

@@ -32,8 +32,8 @@ describe( 'FindPlacePageComponent', () => {
 
   afterEach( () => fixture?.destroy() );
 
-  function render ( type: 'restaurant' | 'store' ): HTMLElement {
-    const entity: FindEntity = { type, label: type === 'store' ? 'Clothing store' : 'Diner', id: 'calle del mar', name: type === 'store' ? 'Calle Del Mar' : 'Young’s Restaurant', logoUrl: null };
+  function render ( type: 'restaurant' | 'store', id = 'calle del mar' ): HTMLElement {
+    const entity: FindEntity = { type, label: type === 'store' ? 'Clothing store' : 'Diner', id, name: type === 'store' ? 'Calle Del Mar' : 'Young’s Restaurant', logoUrl: null };
     fixture = TestBed.createComponent( FindPlacePageComponent );
     fixture.componentRef.setInput( 'entity', entity );
     fixture.componentRef.setInput( 'query', entity.name );
@@ -81,6 +81,23 @@ describe( 'FindPlacePageComponent', () => {
     fixture.detectChanges();
     expect( service.askStore ).toHaveBeenCalledWith( 'calle-del-mar', 'kids sweater' );
     expect( el.textContent ).toContain( 'sends you to Linden Knits in Pasadena' );
+  } );
+
+  it( 'an online-only shop from our Store guides: product photos, no visit card, buy or claim it (2026-11-21)', () => {
+    const online = { ...place, nearest: null, rating: null, hoursWeek: [], placeId: '', photoCount: 3, photos: place.photos.slice( 0, 3 ), name: 'Argent Inc', city: 'San Francisco, CA', online: true };
+    sections = {
+      place: online, reviews: null,
+      retail: { knownFor: 'Seasonless wool', madeIn: '', prices: '', returns: '', shipsNationwide: false, fitNote: '', instagram: '', shop: null, listing: { wantUrl: 'https://16ahead.store/stores?want=argentwork.com', claimUrl: 'https://16ahead.store/claim/argentwork.com' } },
+      products: null,
+    };
+    const el = render( 'store', 'listing:argentwork.com' );
+    expect( el.textContent ).toContain( 'In our Store guides' );
+    expect( el.textContent ).toContain( 'San Francisco, CA' );
+    expect( el.textContent ).toContain( 'Shops online' );
+    expect( el.querySelector( '.pp-visit' ) ).toBeNull();
+    expect( el.querySelector( '.pp-hours' ) ).toBeNull();
+    expect( el.querySelector( '.pp-listed__want' )?.getAttribute( 'href' ) ).toBe( 'https://16ahead.store/stores?want=argentwork.com' );
+    expect( el.querySelector( '.pp-listed__claim' )?.getAttribute( 'href' ) ).toBe( 'https://16ahead.store/claim/argentwork.com' );
   } );
 
   it( 'a store with nothing extra hides those sections', () => {

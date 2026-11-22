@@ -10,6 +10,7 @@
         <span class="ec-chip" *ngIf="openChip as chip" [ngClass]="'pp-chip--' + chip.tone">{{ chip.text }}</span>
         <span class="ec-chip ec-chip--plain" *ngIf="isRestaurant && place?.priceLevel">{{ place?.priceLevel }}</span>
         <span class="ec-chip ec-chip--violet" *ngIf="onStore">On 16Ahead Store</span>
+        <span class="ec-chip ec-chip--violet" *ngIf="inGuides && !onStore">In our Store guides</span>
       </div>
       <h1 class="ec-name">{{ name }}</h1>
       <p class="ec-meta pp-meta" *ngIf="pageMeta.length; else metaLoading">
@@ -81,6 +82,12 @@
         <div class="pp-facts" *ngIf="quickFacts.length">
           <div class="pp-fact" *ngFor="let fact of quickFacts; trackBy: trackByIndex"><span>{{ fact.label }}</span><strong>{{ fact.value }}</strong></div>
         </div>
+
+        <section class="pp-listed" *ngIf="retail?.listing as listing" aria-label="Not on 16Ahead Store yet">
+          <h3 class="pp-label">Not on 16Ahead Store yet</h3>
+          <a class="pp-listed__want" [href]="listing.wantUrl" target="_blank" rel="noopener">Want to buy from them on 16Ahead Store?</a>
+          <a class="pp-listed__claim" [href]="listing.claimUrl" target="_blank" rel="noopener">Is this your shop? Claim it</a>
+        </section>
 
         <section class="pp-ask" *ngIf="retail?.shop as shop" aria-label="Ask this store">
           <h3 class="pp-label">Ask this store</h3>
