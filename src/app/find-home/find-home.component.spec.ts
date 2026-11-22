@@ -313,13 +313,16 @@ describe('FindHomeComponent', () => {
     });
     tick();
     harness.detectChanges();
+    // The store page is deferred (its own chunk): let it load.
+    flush();
+    harness.detectChanges();
 
     expect(navigator.geolocation.getCurrentPosition).toHaveBeenCalled();
     const card = root().querySelector('[data-cy="find-entity-card"]');
     expect(card?.textContent).toContain("Macy's");
 
     const sections = http.match(r => r.url.endsWith('/find/entity/section'));
-    expect(sections.map(req => req.request.body.section).sort()).toEqual([ 'details', 'place', 'sale', 'summary' ]);
+    expect(sections.map(req => req.request.body.section).sort()).toEqual([ 'place', 'products', 'retail', 'reviews', 'summary' ]);
     expect(sections[0].request.body).toEqual(jasmine.objectContaining({ type: 'store', id: "Macy's", latitude: 47.6, longitude: -122.3 }));
     sections.forEach(req => req.flush({ data: null }));
 

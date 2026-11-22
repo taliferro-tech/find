@@ -72,6 +72,13 @@
         <div class="find-pager__center"><span class="find-pager__label">{{ entity.label }}</span></div>
         <span class="find-pager__spacer" aria-hidden="true"></span>
       </nav>
+      <!-- One game: before, live or final (design_handoff_find_game_restaurant_retail, part A). -->
+      <ng-container *ngIf="entity.type === 'game'; else howtoCard">
+        @defer (on immediate) {
+          <app-find-game-card [entity]="entity" [query]="result?.query || query" [moreCount]="entityMoreCount" (moreResults)="showAllResults()" (search)="searchFromCard($event)" (watched)="onEntityWatched($event)"></app-find-game-card>
+        }
+      </ng-container>
+      <ng-template #howtoCard>
       <!-- How-to answers with one video (design_handoff_find_howto_video). -->
       <ng-container *ngIf="entity.type === 'howto'; else wordCard">
         @defer (on immediate) {
@@ -113,8 +120,17 @@
           <app-find-music-card *ngIf="entity.type === 'artist' || entity.type === 'album' || entity.type === 'song'; else placeCard" [entity]="entity" [query]="result?.query || query" [moreCount]="entityMoreCount" (moreResults)="showAllResults()"></app-find-music-card>
         </ng-template>
         <ng-template #placeCard>
+          <!-- Restaurants and stores: the richer page (design_handoff_find_game_restaurant_retail, parts B and C). -->
+          <ng-container *ngIf="entity.type === 'restaurant' || entity.type === 'store'; else serviceCard">
+            @defer (on immediate) {
+              <app-find-place-page [entity]="entity" [query]="result?.query || query" [moreCount]="entityMoreCount" [position]="entityPosition" (moreResults)="showAllResults()" (watched)="onEntityWatched($event)"></app-find-place-page>
+            }
+          </ng-container>
+        </ng-template>
+        <ng-template #serviceCard>
           <app-find-business-card [entity]="entity" [query]="result?.query || query" [moreCount]="entityMoreCount" [position]="entityPosition" (moreResults)="showAllResults()" (watched)="onEntityWatched($event)"></app-find-business-card>
         </ng-template>
+      </ng-template>
       </ng-template>
       </ng-template>
       </ng-template>
@@ -618,7 +634,7 @@
             <span class="find-watching__status">{{ watchStatus(watch) }}</span>
           </button>
           <span class="find-watching__meta">
-            <button type="button" *ngIf="watch.expired || watchDaysLeft(watch) <= 5" (click)="renewWatchItem(watch)">{{ watch.expired ? 'Watch again' : 'Ends in ' + watchDaysLeft(watch) + 'd · Renew' }}</button>
+            <button type="button" *ngIf="watch.kind !== 'game' && (watch.expired || watchDaysLeft(watch) <= 5)" (click)="renewWatchItem(watch)">{{ watch.expired ? 'Watch again' : 'Ends in ' + watchDaysLeft(watch) + 'd · Renew' }}</button>
             <button type="button" (click)="removeWatchItem(watch)" [attr.aria-label]="'Stop watching ' + watch.title">Stop</button>
           </span>
         </li>
