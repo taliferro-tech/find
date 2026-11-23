@@ -17,7 +17,6 @@ import { SoundService } from '../services/sound.service';
 import { PlatformMenuComponent } from '../shared/platform-menu/platform-menu.component';
 import { SeoService } from '../shared/seo.service';
 import { Title, Meta } from '@angular/platform-browser';
-import { SiteFooterComponent } from '../shared/site-footer/site-footer.component';
 import { MENU_COMPANY } from '@taliferro/ui/platform/universal-menu.model';
 import { AlsoFromUsComponent } from '../shared/also-from-us/also-from-us.component';
 import { MarketStripComponent } from '../shared/market-strip/market-strip.component';
@@ -77,7 +76,7 @@ function distanceMeters ( from: { latitude: number; longitude: number }, latitud
 @Component( {
   selector: 'app-find-home',
   standalone: true,
-  imports: [ FindGameCardComponent, FindPlacePageComponent, FindEntityCardComponent, FindBusinessCardComponent, FindShopCardComponent, FindWordCardComponent, FindHowToCardComponent, FindTeamVideosComponent, FindRegionCardComponent, FindMediaCardComponent, FindMusicCardComponent, FindCompanyCardComponent, MarketStripComponent, AlsoFromUsComponent, SiteFooterComponent, CommonModule, FormsModule, RouterModule, FindSwipeDirective, PlatformMenuComponent, AwardBadgeComponent, FindWelcomeComponent, FindDailyComponent, FindCrewsComponent],
+  imports: [ FindGameCardComponent, FindPlacePageComponent, FindEntityCardComponent, FindBusinessCardComponent, FindShopCardComponent, FindWordCardComponent, FindHowToCardComponent, FindTeamVideosComponent, FindRegionCardComponent, FindMediaCardComponent, FindMusicCardComponent, FindCompanyCardComponent, MarketStripComponent, AlsoFromUsComponent, CommonModule, FormsModule, RouterModule, FindSwipeDirective, PlatformMenuComponent, AwardBadgeComponent, FindWelcomeComponent, FindDailyComponent, FindCrewsComponent],
   templateUrl: './find-home.component.html',
   styleUrls: ['./find-home.component.css', './find-home.grid.css', './find-home.features.css', './find-home.score.css'],
   // The prerendered "/" always contains the home screen, but a `?query=` or

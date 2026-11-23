@@ -657,6 +657,21 @@
       <h2>About Find</h2>
       <span class="find-screen-header__spacer" aria-hidden="true"></span>
     </div>
+    <!-- Settings first, then what Find is (Ty, 2026-11-22). Nothing below the cards: no footer here. -->
+    <div class="find-info-card find-info-setting">
+      <label class="find-info-setting__row">
+        <span>
+          <strong>Use my location</strong>
+          <small>Shows how far away places are on every search, not just "near me". Your location is sent with each search and never stored.</small>
+        </span>
+        <input type="checkbox" role="switch" class="find-switch" [checked]="useLocationEverywhere" (change)="setUseLocationEverywhere($any($event.target).checked)" />
+      </label>
+      <p class="find-info-setting__note" *ngIf="locationSettingNote">{{ locationSettingNote }}</p>
+    </div>
+    <div class="find-gyro-section" *ngIf="gyroSupported">
+      <button class="find-gyro-btn" type="button" *ngIf="!gyroEnabled" (click)="enableGyroscope()">Enable tilt navigation</button>
+      <p class="find-gyro-on" *ngIf="gyroEnabled">Tilt navigation is active. Tilt left / right to move between results. Hold for 1.5 s to open automatically.</p>
+    </div>
     <div class="find-info-body">
       <a class="find-info-app-link" href="https://apps.apple.com/us/app/taliferro-find/id6806954591" target="_blank" rel="noopener noreferrer">
         <span class="find-info-app-link__eyebrow">Find for iPhone</span>
@@ -688,31 +703,6 @@
         <p><a routerLink="/help">Watch how to use Find and read the walkthrough</a>, or see <a routerLink="/about">what Find offers, free on the web and iPhone</a>.</p>
       </div>
     </div>
-    <div class="find-info-card find-info-setting">
-      <label class="find-info-setting__row">
-        <span>
-          <strong>Use my location</strong>
-          <small>Shows how far away places are on every search, not just "near me". Your location is sent with each search and never stored.</small>
-        </span>
-        <input type="checkbox" role="switch" class="find-switch" [checked]="useLocationEverywhere" (change)="setUseLocationEverywhere($any($event.target).checked)" />
-      </label>
-      <p class="find-info-setting__note" *ngIf="locationSettingNote">{{ locationSettingNote }}</p>
-    </div>
-    <div class="find-info-built">
-      <p class="find-info-built__label">Built by</p>
-      <a class="find-info-built__company" href="https://taliferro.tech" target="_blank" rel="noopener noreferrer">Taliferro Tech</a>
-      <p class="find-info-built__powered">Powered by <a [href]="company.url" target="_blank" rel="noopener noreferrer">{{ company.name }}</a></p>
-      <p class="find-info-built__mission">“Our mission is to make search obsolete.”<small>Written in 2010. Still the plan.</small></p>
-      <p class="find-info-built__tagline">Find is part of 16Ahead — the Momentum System designed for teams that move fast and need information faster.</p>
-      <p class="find-info-version" *ngIf="appVersion">Version {{ appVersion }}</p>
-    </div>
-    <div class="find-gyro-section" *ngIf="gyroSupported">
-      <button class="find-gyro-btn" type="button" *ngIf="!gyroEnabled" (click)="enableGyroscope()">Enable tilt navigation</button>
-      <p class="find-gyro-on" *ngIf="gyroEnabled">Tilt navigation is active. Tilt left / right to move between results. Hold for 1.5 s to open automatically.</p>
-    </div>
-    <!-- Company, products and policy links. Kept off the search screen,
-         where it competed with the search. -->
-    <app-site-footer><a href="/guides">Guides</a><a routerLink="/help">Help</a><a routerLink="/about">About</a></app-site-footer>
   </div>
   <!-- "Let me know when it's ready" on a slow search -->
   <ng-template #readyNotice>
