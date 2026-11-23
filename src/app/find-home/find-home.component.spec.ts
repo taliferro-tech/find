@@ -1430,16 +1430,20 @@ describe('FindHomeComponent', () => {
     expect(root().querySelector('.find-info-screen h2')?.textContent).toContain('About Find');
   }));
 
-  it('keeps the company footer on the Info tab, off the search screen', fakeAsync(() => {
+  it('Info starts with Use my location, then the cards, with no footer or credits (Ty, 2026-11-22)', fakeAsync(() => {
     expect(root().querySelector('.find-search-screen app-site-footer')).toBeNull();
 
     byLabel('About Find').click();
     harness.detectChanges();
 
-    const footer = root().querySelector('.find-info-screen app-site-footer');
-    expect(footer).not.toBeNull();
-    expect(footer!.textContent).toContain('support@16ahead.com');
-    expect(footer!.textContent).toContain('Privacy Policy');
+    const info = root().querySelector('.find-info-screen')!;
+    expect(info.querySelector('app-site-footer')).toBeNull();
+    expect(info.querySelector('.find-info-built')).toBeNull();
+    const setting = info.querySelector('.find-info-setting')!;
+    const firstCard = info.querySelector('.find-info-body')!;
+    expect(setting.textContent).toContain('Use my location');
+    expect(setting.compareDocumentPosition(firstCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(firstCard.textContent).toContain('Help and how-to videos');
   }));
 
   // --- Find Score (2026-11-17) ---
