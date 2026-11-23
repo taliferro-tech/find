@@ -1,11 +1,21 @@
-<main class="find-help-page">
-  <app-site-header current="help" />
+<!-- The shared Help template (taliferro-ui), then Find's how-to videos and walkthrough. -->
+<app-product-pages page="help">
+  <section class="pp-section help-shorts" aria-labelledby="help-shorts-title" data-cy="find-how-to-videos">
+    <p class="pp-kicker">How-to videos</p>
+    <h2 id="help-shorts-title">See how to use Find</h2>
+    <div class="help-shorts__grid">
+      <figure class="help-short" *ngFor="let short of shorts">
+        <iframe *ngIf="playing.get(short.id) as src" [src]="src" [title]="short.title" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+        <button *ngIf="!playing.has(short.id)" type="button" class="help-short__play" (click)="play(short)" [attr.aria-label]="'Play: ' + short.title" data-cy="find-short">
+          <img [src]="'https://i.ytimg.com/vi/' + short.id + '/oardefault.jpg'" alt="" loading="lazy" (error)="$any($event.target).src = 'https://i.ytimg.com/vi/' + short.id + '/hqdefault.jpg'" />
+          <span class="help-short__icon" aria-hidden="true">▶</span>
+        </button>
+        <figcaption>{{ short.title }}</figcaption>
+      </figure>
+    </div>
+  </section>
+
   <div class="help-container">
-    <header class="help-hero">
-      <p class="help-hero__row"><span class="help-tag">Find Help</span><span>Search · Results · Context · Discovery</span></p>
-      <h1>Search that starts with the right result.</h1>
-      <p class="help-hero__lead">Find is a visual search experience that puts the strongest result first, then gives you the context, alternatives, and source material to keep exploring.</p>
-    </header>
     <section class="help-walkthrough" aria-labelledby="help-start-title">
       <nav class="help-toc" aria-label="Walkthrough steps">
         <p class="help-label">A practical walkthrough</p>
@@ -52,5 +62,4 @@
       </div>
     </section>
   </div>
-  <footer class="help-footer"><a routerLink="/">← Back to Find</a><a routerLink="/about">About Find →</a></footer>
-</main>
+</app-product-pages>

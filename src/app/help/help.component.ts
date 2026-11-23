@@ -1,9 +1,27 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, Inject, NgZone, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Inject, NgZone, OnDestroy, PLATFORM_ID } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Title, Meta } from '@angular/platform-browser';
-import { SiteHeaderComponent } from '../shared/site-header/site-header.component';
-import { SeoService } from '../shared/seo.service';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { ProductPagesComponent } from '../shared/product-pages/product-pages.component';
+
+/** A how-to Short on YouTube, shown on Help (Ty, 2026-11-22). */
+export interface HowToShort {
+  id: string;
+  title: string;
+}
+
+/**
+ * The how-to Shorts shown on Help. Only public or unlisted videos go here:
+ * a private one shows "Video unavailable" to everyone else. Ty's four other
+ * Shorts were private on 2026-11-22 and wait in WAITING_SHORTS until they're
+ * made public or unlisted.
+ */
+export const HOW_TO_SHORTS: HowToShort[] = [
+  { id: 'f7ChnqHzAvI', title: 'How to look up any sports team' },
+  { id: 'HMDUfKjg3S4', title: 'How to check on any football game' },
+];
+/** Private on YouTube as of 2026-11-22; move each into HOW_TO_SHORTS (with its title) once it's public or unlisted. */
+export const WAITING_SHORTS = ['pvQPPyYdmIk', 'RmY2VGRqIjM', 'x4b2p16GD5Q', '7XF-tGqhTC0'];
 
 interface HelpStep {
   number: string;
@@ -23,35 +41,30 @@ interface HelpStep {
 @Component({
   selector: 'app-find-help',
   standalone: true,
-  imports: [CommonModule, RouterLink, SiteHeaderComponent],
+  imports: [CommonModule, RouterLink, ProductPagesComponent],
   templateUrl: './help.component.html',
   styleUrl: './help.component.css',
 })
-export class HelpComponent implements OnInit, AfterViewInit, OnDestroy {
+export class HelpComponent implements AfterViewInit, OnDestroy {
   /** The step the contents list highlights; follows scrolling. */
   activeStep = '01';
   private observer: IntersectionObserver | null = null;
 
+  readonly shorts = HOW_TO_SHORTS;
+  /** Shorts the visitor pressed play on: only those load YouTube's player. */
+  readonly playing = new Map<string, SafeResourceUrl>();
+
   constructor(
-    private readonly title: Title,
-    private readonly meta: Meta,
-    private readonly seo: SeoService,
+    private readonly sanitizer: DomSanitizer,
     private readonly host: ElementRef<HTMLElement>,
     private readonly zone: NgZone,
     @Inject(PLATFORM_ID) private readonly platformId: object,
   ) {}
 
-  ngOnInit(): void {
-    const pageTitle = 'Find Help — How to search with Find | 16Ahead';
-    const description = 'A walkthrough of how to use Find: ask a question, read the strongest result first, explore alternatives, refine with context pills, and use quick actions.';
-    this.title.setTitle(pageTitle);
-    this.meta.updateTag({ name: 'description', content: description });
-    this.meta.updateTag({ property: 'og:title', content: pageTitle });
-    this.meta.updateTag({ property: 'og:description', content: description });
-    this.meta.updateTag({ property: 'og:url', content: 'https://find.16ahead.com/help' });
-    this.meta.updateTag({ name: 'twitter:title', content: pageTitle });
-    this.meta.updateTag({ name: 'twitter:description', content: description });
-    this.seo.setCanonical('https://find.16ahead.com/help');
+  /** Title, description and canonical come from the shared template. Pressing a Short's picture loads its player. */
+  play(short: HowToShort): void {
+    if (this.playing.has(short.id)) return;
+    this.playing.set(short.id, this.sanitizer.bypassSecurityTrustResourceUrl(`https://www.youtube-nocookie.com/embed/${encodeURIComponent(short.id)}?autoplay=1&playsinline=1&rel=0`));
   }
 
   ngAfterViewInit(): void {

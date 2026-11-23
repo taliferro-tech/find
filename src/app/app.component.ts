@@ -6,6 +6,11 @@ import { environment } from '../environments/environment';
 import { UpdateBannerComponent } from './shared/update-banner/update-banner.component';
 import { VersionUpdateService } from './shared/version-update/version-update.service';
 
+/** /help and /about (any query or hash). Exported for the spec. */
+export function isProductPage ( url: string ): boolean {
+  return /^\/(help|about)\/?(?:[?#].*)?$/.test( String( url || '' ) );
+}
+
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet, UpdateBannerComponent, NgIf],
@@ -18,10 +23,16 @@ export class AppComponent implements OnInit {
 
   title = 'find';
   showInstallBanner = false;
+  /** True on Help and About: the banner would cover their Help/About toggle, and both already offer the iPhone app. */
+  onProductPage = false;
   readonly appStoreUrl = 'https://apps.apple.com/us/app/taliferro-find/id6806954591';
 
   ngOnInit (): void {
     this.showInstallBanner = this.shouldShowInstallBanner();
+    this.onProductPage = isProductPage( typeof window === 'undefined' ? '' : window.location.pathname );
+    this.router.events.pipe( filter( ( e ): e is NavigationEnd => e instanceof NavigationEnd ) ).subscribe( ( e ) => {
+      this.onProductPage = isProductPage( e.urlAfterRedirects );
+    } );
     if ( environment.production ) {
       this.versionUpdateService.start();
     }

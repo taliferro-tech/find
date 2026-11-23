@@ -1,78 +1,19 @@
-import { DOCUMENT } from '@angular/common';
-import { Component, Inject, OnDestroy, OnInit, Renderer2 } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Title, Meta } from '@angular/platform-browser';
-import { SiteHeaderComponent } from '../shared/site-header/site-header.component';
-import { SeoService } from '../shared/seo.service';
 
-@Component({
+import { ProductPagesComponent } from '../shared/product-pages/product-pages.component';
+
+/**
+ * About Find: the shared About template (Help and About side by side, like
+ * every 16Ahead app), then Find's offer in five lines, its 30-second video,
+ * the product idea and what people say. The template sets the page title,
+ * description, canonical and structured data. Static, so it prerenders.
+ */
+@Component( {
   selector: 'app-find-about',
   standalone: true,
-  imports: [RouterLink, SiteHeaderComponent],
+  imports: [RouterLink, ProductPagesComponent],
   templateUrl: './about.component.html',
   styleUrl: './about.component.css',
-})
-export class AboutComponent implements OnInit, OnDestroy {
-  private schemaScript: HTMLScriptElement | null = null;
-
-  constructor (
-    @Inject(DOCUMENT) private readonly document: Document,
-    private readonly renderer: Renderer2,
-    private readonly title: Title,
-    private readonly meta: Meta,
-    private readonly seo: SeoService,
-  ) { }
-
-  ngOnInit (): void {
-    const pageTitle = 'About Find | 16Ahead';
-    const description = 'Find is Taliferro Tech\'s search and results application: the strongest result first, with context when you need it.';
-    this.title.setTitle( pageTitle );
-    this.meta.updateTag( { name: 'description', content: description } );
-    this.meta.updateTag( { property: 'og:title', content: pageTitle } );
-    this.meta.updateTag( { property: 'og:description', content: description } );
-    this.meta.updateTag( { property: 'og:url', content: 'https://find.16ahead.com/about' } );
-    this.meta.updateTag( { name: 'twitter:title', content: pageTitle } );
-    this.meta.updateTag( { name: 'twitter:description', content: description } );
-    this.seo.setCanonical( 'https://find.16ahead.com/about' );
-    this.addStructuredData();
-  }
-
-  ngOnDestroy (): void {
-    this.schemaScript?.remove();
-  }
-
-  private addStructuredData (): void {
-    this.schemaScript = this.renderer.createElement( 'script' ) as HTMLScriptElement;
-    this.schemaScript.type = 'application/ld+json';
-    this.schemaScript.id = 'find-about-structured-data';
-    this.schemaScript.text = JSON.stringify( {
-      '@context': 'https://schema.org',
-      '@graph': [
-        {
-          '@type': 'Organization',
-          '@id': 'https://taliferro.tech/#organization',
-          name: 'Taliferro Tech, LLC',
-          url: 'https://taliferro.tech',
-          logo: 'https://find.16ahead.com/assets/find/entities/taliferro-tech/logo.png',
-          description: 'Taliferro Tech creates software products that help people find information, build momentum, and act on useful context.',
-        },
-        {
-          '@type': 'SoftwareApplication',
-          '@id': 'https://find.16ahead.com/#software',
-          name: 'Find',
-          url: 'https://find.16ahead.com/',
-          description: 'Find is a search and results application that puts the strongest result first, with context, alternatives, and source material when you need it.',
-          applicationCategory: 'SearchApplication',
-          applicationSubCategory: 'Search engine',
-          operatingSystem: 'Web, iOS',
-          isAccessibleForFree: true,
-          image: 'https://find.16ahead.com/assets/seo/find-card.webp',
-          downloadUrl: 'https://apps.apple.com/us/app/taliferro-find/id6806954591',
-          creator: { '@id': 'https://taliferro.tech/#organization' },
-          publisher: { '@id': 'https://taliferro.tech/#organization' },
-        },
-      ],
-    } );
-    this.renderer.appendChild( this.document.head, this.schemaScript );
-  }
-}
+} )
+export class AboutComponent { }

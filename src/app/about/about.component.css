@@ -1,73 +1,10 @@
-/* docs: design_handoff_find_grid_about_help 4e. Find family tokens come from
-   @taliferro/ui/styles/tokens.css and handle dark mode. */
-:host { display: block; }
-.find-about-page { min-height: 100dvh; background: var(--bg); color: var(--text); font-family: var(--font); }
-
-.about-container { max-width: 1040px; margin: 0 auto; padding: 40px 40px 32px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box; }
-
-.about-tag { display: inline-block; align-self: flex-start; padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
-.about-tag--blue { background: var(--t-blue); color: var(--t-blue-fg); }
-.about-tag--violet { background: var(--t-violet); color: var(--t-violet-fg); }
-.about-tag--pink { background: var(--t-pink); color: var(--t-pink-fg); }
-.about-tag--cyan { background: var(--t-cyan); color: var(--t-cyan-fg); }
-
-.about-hero { display: grid; grid-template-columns: minmax(0, 1fr) 140px; gap: 48px; align-items: center; padding-bottom: 28px; }
-.about-hero__row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; color: var(--muted); font-size: 14px; }
-.about-hero h1 { margin: 20px 0 0; font-size: 60px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; text-wrap: balance; }
-.about-hero__lead { max-width: 680px; margin: 24px 0 0; color: var(--muted); font-size: 19px; line-height: 1.6; }
-.about-hero__logo { width: 140px; height: auto; }
-
-.about-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.about-card { display: flex; flex-direction: column; gap: 10px; padding: 28px; border-radius: 28px; background: var(--surface); }
-.about-card h2 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
-.about-card p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.6; }
-.about-card__link { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 40px; margin-top: 6px; padding: 0 16px; border-radius: 999px; background: var(--bg); color: var(--text); font-size: 14px; font-weight: 700; text-decoration: none; transition: color .16s ease; }
-.about-card__link:hover { color: var(--blue-ink); }
-
-.about-principles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px; padding: 36px; border-radius: 28px; background: var(--t-blue); color: var(--t-blue-fg); }
-.about-principles__label { margin: 0 0 12px; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.about-principles h2 { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
-.about-principles__copy { display: flex; flex-direction: column; gap: 14px; }
-.about-principles__copy p { margin: 0; color: var(--text); font-size: 17px; line-height: 1.6; }
-
-.about-voices { display: flex; flex-direction: column; gap: 16px; padding-top: 12px; }
-.about-voices__head h2 { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
-.about-voices__head .about-principles__label { color: var(--muted); }
-.about-voices__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.about-voice { margin: 0; padding: 28px; border-radius: 28px; background: var(--surface); }
-.about-voice blockquote { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.4; }
-.about-voice blockquote::before { content: "\201C"; }
-.about-voice blockquote::after { content: "\201D"; }
-.about-voice--featured { padding: 36px; background: var(--t-violet); color: var(--t-violet-fg); }
-.about-voice--featured blockquote { max-width: 820px; color: var(--text); font-size: 26px; letter-spacing: -0.02em; line-height: 1.35; }
-.about-voices__note { margin: 0; color: var(--muted); font-size: 13px; }
-
-.about-actions { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 8px; }
-.about-button { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 24px; border-radius: 999px; background: var(--surface); color: var(--text); font-size: 15px; font-weight: 700; text-decoration: none; transition: background .16s ease, filter .16s ease; }
-.about-button:hover { background: var(--surface2); }
-.about-button--primary, .about-button--primary:hover { background: var(--blue); color: #fff; }
-.about-button--primary:hover { filter: brightness(.94); }
-
-.about-footer { display: flex; justify-content: space-between; gap: 16px; padding: 24px 40px 28px; color: var(--muted); font-size: 13px; }
-.about-footer a { color: var(--text); font-weight: 600; text-decoration: none; }
-.about-footer a:hover { color: var(--blue-ink); }
-
-@media (max-width: 900px) {
-  .about-hero h1 { font-size: 46px; }
+.find-about-video video {
+  display: block; width: 100%; max-width: 320px; aspect-ratio: 9 / 16; margin-top: 16px;
+  border-radius: 20px; background: #000; object-fit: cover;
 }
-
-@media (max-width: 700px) {
-  .about-container { padding: 24px 16px 24px; }
-  .about-hero { grid-template-columns: 1fr; gap: 20px; padding-bottom: 8px; }
-  .about-hero h1 { font-size: 38px; }
-  .about-hero__lead { font-size: 17px; }
-  .about-hero__logo { width: 74px; grid-row: 1; }
-  .about-grid, .about-principles, .about-voices__grid { grid-template-columns: 1fr; }
-  .about-voices__head h2 { font-size: 28px; }
-  .about-voice, .about-voice--featured { padding: 22px; }
-  .about-voice--featured blockquote { font-size: 21px; }
-  .about-card { padding: 22px; }
-  .about-principles { gap: 20px; padding: 24px; }
-  .about-principles h2 { font-size: 28px; }
-  .about-footer { padding: 20px 16px 28px; }
-}
+.about-voice { margin: 16px 0 0; padding: 18px 20px; border-radius: 20px; background: var(--bg, #fff); }
+.about-voice blockquote { margin: 0; font-size: 15px; line-height: 1.55; color: var(--text); }
+.about-voice--featured blockquote { font-size: 18px; font-weight: 600; }
+.about-voices__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.about-voices__note { margin-top: 12px; color: var(--muted); font-size: 13px; }
+@media (max-width: 720px) { .about-voices__grid { grid-template-columns: 1fr; } }
