@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -28,6 +28,7 @@ import { FindPlacePageComponent } from './place-page/find-place-page.component';
 import { FindWordCardComponent } from './word-card/find-word-card.component';
 import { FindHowToCardComponent } from './howto-card/find-howto-card.component';
 import { FindTeamVideosComponent } from './team-videos/find-team-videos.component';
+import { rememberShareLink } from './share-link';
 import { FindRegionCardComponent } from './region-card/find-region-card.component';
 import { FindMediaCardComponent } from './media-card/find-media-card.component';
 import { FindMusicCardComponent } from './music-card/find-music-card.component';
@@ -245,7 +246,8 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     private readonly title: Title,
     private readonly meta: Meta,
     private readonly seo: SeoService,
-    private readonly headlineFeeds: HeadlineFeedsService
+    private readonly headlineFeeds: HeadlineFeedsService,
+    private readonly location: Location
   ) { }
 
   ngOnInit (): void {
@@ -311,6 +313,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy (): void {
+    this.cancelAddressShare();
     this.clearNotifyOffer();
     this.routeSub?.unsubscribe();
     this.gyroSub?.unsubscribe();
@@ -528,10 +531,11 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   }
 
-  shareResult (): void {
+  /** What a share of the current result says (the Share button and the address bar use the same). */
+  private get sharePayload (): { query: string; title: string; summary: string; kind?: string; url?: string; displayUrl?: string; imageUrl?: string } | null {
     const card = this.currentCard;
     const query = String( this.result?.query || this.query || '' ).trim();
-    if ( !this.result || !query || this.isWeatherMode ) return;
+    if ( !this.result || !query || this.isWeatherMode ) return null;
     const title = this.isInstantMode ? `${ this.instant?.title }: ${ this.instant?.value }`
       : this.isConversionMode ? this.conversionResultText || query
       : this.isQuestionMode ? this.currentQuestionTitle || query
@@ -539,17 +543,115 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     const summary = this.isInstantMode ? String( this.instant?.detail || '' )
       : this.isConversionMode ? ''
       : String( this.currentAnswerText || card?.summary || '' ).replace( /<[^>]+>/g, '' ).slice( 0, 300 );
-    // Until the short link is ready, sharing still works with a plain link.
-    const fallbackUrl = `https://find.16ahead.com/?query=${ encodeURIComponent( query ) }`;
-    this.sharePanel = { title, url: fallbackUrl, loading: true, copied: false };
-    this.findExperienceService.createShare( {
-      query, title, summary,
+    // What the result is ("Artist", "Restaurant"), for the small line on its preview card.
+    const kind = this.showEntityCard ? String( this.entity?.label || '' ).trim() || undefined : undefined;
+    return {
+      query, title, summary, kind,
       url: card?.url, displayUrl: card?.displayUrl,
       imageUrl: this.currentOwnImage || undefined,
-    } ).subscribe( {
+    };
+  }
+
+  shareResult (): void {
+    const payload = this.sharePayload;
+    if ( !payload ) return;
+    // Until the short link is ready, sharing still works with a plain link.
+    const fallbackUrl = `https://find.16ahead.com/?query=${ encodeURIComponent( payload.query ) }`;
+    this.sharePanel = { title: payload.title, url: fallbackUrl, loading: true, copied: false };
+    this.findExperienceService.createShare( payload ).subscribe( {
       next: ( share ) => { if ( this.sharePanel ) this.sharePanel = { ...this.sharePanel, url: share.url || fallbackUrl, loading: false }; },
       error: () => { if ( this.sharePanel ) this.sharePanel = { ...this.sharePanel, loading: false }; },
     } );
+  }
+
+  // --- Shareable address bar ---
+  // Once a plain result page has rendered, its short link replaces
+  // /?query=… in the address bar (replaceState: no navigation, Back still
+  // works), so a link copied from there previews as the result's card. In
+  // the background, once per result, after the page has settled; any
+  // failure just leaves the address as it was. See share-link.ts.
+
+  private addressShareTimer: ReturnType<typeof setTimeout> | null = null;
+  // Result key (query|url) -> its short link path ('' while being made).
+  private readonly addressShares = new Map<string, string>();
+
+  private scheduleAddressShare ( query: string ): void {
+    this.cancelAddressShare();
+    if ( typeof window === 'undefined' ) return;
+    const searchId = this.searchId;
+    this.addressShareTimer = setTimeout( () => {
+      this.addressShareTimer = null;
+      const run = () => this.swapToShareLink( query, searchId );
+      const idle = ( window as Window & { requestIdleCallback?: ( fn: () => void, options?: { timeout: number } ) => number } ).requestIdleCallback;
+      if ( typeof idle === 'function' ) idle.call( window, run, { timeout: 3000 } );
+      else run();
+    }, 2500 );
+  }
+
+  private cancelAddressShare (): void {
+    if ( this.addressShareTimer !== null ) clearTimeout( this.addressShareTimer );
+    this.addressShareTimer = null;
+  }
+
+  private swapToShareLink ( query: string, searchId: number ): void {
+    if ( !this.isAddressShareable( query, searchId ) ) return;
+    const payload = this.sharePayload;
+    if ( !payload ) return;
+    const key = `${ payload.query.toLowerCase() }|${ payload.url || '' }`;
+    const known = this.addressShares.get( key );
+    if ( known ) {
+      this.replaceAddress( known, query, searchId );
+      return;
+    }
+    if ( known === '' ) return;
+    this.addressShares.set( key, '' );
+    this.findExperienceService.createShare( payload ).subscribe( {
+      next: ( share ) => {
+        const path = this.shareLinkPath( share?.url );
+        if ( !path || !share?.id ) {
+          this.addressShares.delete( key );
+          return;
+        }
+        this.addressShares.set( key, path );
+        rememberShareLink( share.id, query );
+        this.replaceAddress( path, query, searchId );
+      },
+      error: () => { this.addressShares.delete( key ); },
+    } );
+  }
+
+  /** Only a plain, finished result page: "/" with just its query (and a ref), nothing refined or location-based. */
+  private isAddressShareable ( query: string, searchId: number ): boolean {
+    if ( typeof window === 'undefined' || searchId !== this.searchId ) return false;
+    if ( this.activeView !== 'result' || this.isLoading || this.isRefining || !this.result ) return false;
+    if ( this.activeContext || this.isWeatherMode || String( this.query || '' ).trim() !== query ) return false;
+    try {
+      const url = new URL( window.location.href );
+      if ( url.pathname !== '/' ) return false;
+      const current = String( url.searchParams.get( 'query' ) || url.searchParams.get( 'q' ) || url.searchParams.get( 'findQuery' ) || '' ).trim();
+      if ( current !== query ) return false;
+      const allowed = new Set( [ 'query', 'q', 'findQuery', 'ref' ] );
+      return Array.from( url.searchParams.keys() ).every( name => allowed.has( name ) );
+    } catch {
+      return false;
+    }
+  }
+
+  /** "/s/<id>?r=<code>" from the short link the API returns. */
+  private shareLinkPath ( link: string | undefined ): string {
+    try {
+      const url = new URL( String( link || '' ) );
+      return /^\/s\/[0-9A-Za-z]{10}$/.test( url.pathname ) ? `${ url.pathname }${ url.search }` : '';
+    } catch {
+      return '';
+    }
+  }
+
+  private replaceAddress ( path: string, query: string, searchId: number ): void {
+    // The page may have moved on while the link was being made.
+    if ( !this.isAddressShareable( query, searchId ) ) return;
+    const [ pathname, search = '' ] = path.split( '?' );
+    this.location.replaceState( pathname, search, this.location.getState() );
   }
 
   async shareNatively (): Promise<void> {
@@ -2116,6 +2218,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     const extraHeadlines = this.headlineFeeds.extraHeadlines( this.headlineFeeds.sectionForQuery( query ) );
     const searchId = ++this.searchId;
 
+    this.cancelAddressShare();
     this.clearEntity();
     if ( !normalizedContext ) {
       this.entitySub = this.findExperienceService.detectEntity( query ).subscribe( {
@@ -2360,6 +2463,8 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     if ( response?.queryType !== 'question' && response?.queryType !== 'weather' && response?.queryType !== 'conversion' && response?.queryType !== 'movie' && !this.isHeadlineMode && ( !isLocalResult || localHasRealWebsite ) ) {
       this.loadSummary();
     }
+    // The address bar becomes the result's short link once the page settles.
+    this.scheduleAddressShare( query );
   }
 
   // Geolocation is requested only for location-shaped queries (including the
