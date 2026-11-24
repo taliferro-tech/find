@@ -117,7 +117,7 @@
           <app-find-media-card *ngIf="entity.type === 'movie' || entity.type === 'tv'; else musicCard" [entity]="entity" [query]="result?.query || query" [moreCount]="entityMoreCount" (moreResults)="showAllResults()"></app-find-media-card>
         </ng-template>
         <ng-template #musicCard>
-          <app-find-music-card *ngIf="entity.type === 'artist' || entity.type === 'album' || entity.type === 'song'; else placeCard" [entity]="entity" [query]="result?.query || query" [moreCount]="entityMoreCount" (moreResults)="showAllResults()"></app-find-music-card>
+          <app-find-music-card *ngIf="entity.type === 'artist' || entity.type === 'album' || entity.type === 'song'; else placeCard" [entity]="entity" (shareDetails)="onEntityShareDetails($event)" [query]="result?.query || query" [moreCount]="entityMoreCount" (moreResults)="showAllResults()"></app-find-music-card>
         </ng-template>
         <ng-template #placeCard>
           <!-- Restaurants and stores: the richer page (design_handoff_find_game_restaurant_retail, parts B and C). -->

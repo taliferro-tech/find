@@ -28,6 +28,8 @@ export class FindMusicCardComponent implements OnChanges, OnDestroy {
   @Input() query = '';
   @Input() moreCount: number | null = null;
   @Output() moreResults = new EventEmitter<void>();
+  /** What a share of this result should show: the artist's (or cover's) photo and the summary, once loaded. */
+  @Output() shareDetails = new EventEmitter<{ summary: string; imageUrl: string }>();
 
   facts?: FindMusicFactsSection | null;
   apple?: FindMusicAppleSection | null;
@@ -55,9 +57,13 @@ export class FindMusicCardComponent implements OnChanges, OnDestroy {
     this.expanded = false;
     this.openSections.clear();
     this.imageFailed = false;
-    this.fetch<FindMusicFactsSection>( 'facts', data => this.facts = data );
-    this.fetch<FindMusicAppleSection>( 'apple', data => this.apple = data );
-    this.fetch<FindEntitySummary>( 'summary', data => this.summary = data?.text ? data : null );
+    this.fetch<FindMusicFactsSection>( 'facts', data => { this.facts = data; this.emitShareDetails(); } );
+    this.fetch<FindMusicAppleSection>( 'apple', data => { this.apple = data; this.emitShareDetails(); } );
+    this.fetch<FindEntitySummary>( 'summary', data => { this.summary = data?.text ? data : null; this.emitShareDetails(); } );
+  }
+
+  private emitShareDetails (): void {
+    this.shareDetails.emit( { summary: String( this.summary?.text || '' ), imageUrl: String( this.image || '' ) } );
   }
 
   private fetch<T> ( section: FindEntitySection, apply: ( data: T | null ) => void ): void {

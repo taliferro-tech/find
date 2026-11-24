@@ -536,6 +536,19 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     const card = this.currentCard;
     const query = String( this.result?.query || this.query || '' ).trim();
     if ( !this.result || !query || this.isWeatherMode ) return null;
+    // An entity page (artist, team, shop…) is about the entity, not the top web link under it.
+    if ( this.showEntityCard && this.entity?.name ) {
+      const details = this.entityShareDetails?.entityId === this.entity.id ? this.entityShareDetails : null;
+      const image = details?.imageUrl || String( this.entity.logoUrl || '' );
+      return {
+        query,
+        title: this.entity.name,
+        summary: String( details?.summary || '' ).replace( /<[^>]+>/g, '' ).slice( 0, 300 ),
+        kind: String( this.entity.label || '' ).trim() || undefined,
+        url: this.entity.website || undefined,
+        imageUrl: /^https:\/\//i.test( image ) ? image : undefined,
+      };
+    }
     const title = this.isInstantMode ? `${ this.instant?.title }: ${ this.instant?.value }`
       : this.isConversionMode ? this.conversionResultText || query
       : this.isQuestionMode ? this.currentQuestionTitle || query
@@ -571,6 +584,17 @@ export class FindHomeComponent implements OnInit, OnDestroy {
   // the background, once per result, after the page has settled; any
   // failure just leaves the address as it was. See share-link.ts.
 
+  // Photo and summary an entity card has loaded, for its share card.
+  private entityShareDetails: { entityId: string; summary: string; imageUrl: string } | null = null;
+
+  onEntityShareDetails ( details: { summary: string; imageUrl: string } ): void {
+    if ( !this.entity ) return;
+    this.entityShareDetails = { entityId: this.entity.id, ...details };
+    // A link already in the address bar gets the fuller card too (same id; the backend redraws it).
+    const query = String( this.query || '' ).trim();
+    if ( query && this.addressShareTimer === null && this.addressShares.size ) this.swapToShareLink( query, this.searchId, true );
+  }
+
   private addressShareTimer: ReturnType<typeof setTimeout> | null = null;
   // Result key (query|url) -> its short link path ('' while being made).
   private readonly addressShares = new Map<string, string>();
@@ -593,11 +617,12 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     this.addressShareTimer = null;
   }
 
-  private swapToShareLink ( query: string, searchId: number ): void {
-    if ( !this.isAddressShareable( query, searchId ) ) return;
+  private swapToShareLink ( query: string, searchId: number, onShareLink = false ): void {
+    if ( !( onShareLink ? searchId === this.searchId && this.isOnShareLink() : this.isAddressShareable( query, searchId ) ) ) return;
     const payload = this.sharePayload;
     if ( !payload ) return;
-    const key = `${ payload.query.toLowerCase() }|${ payload.url || '' }`;
+    // The image and summary are part of the key, so a card that loads its photo later updates the same link's card.
+    const key = `${ payload.query.toLowerCase() }|${ payload.url || '' }|${ payload.imageUrl || '' }|${ payload.summary.length }`;
     const known = this.addressShares.get( key );
     if ( known ) {
       this.replaceAddress( known, query, searchId );
@@ -618,6 +643,10 @@ export class FindHomeComponent implements OnInit, OnDestroy {
       },
       error: () => { this.addressShares.delete( key ); },
     } );
+  }
+
+  private isOnShareLink (): boolean {
+    try { return /^\/s\/[0-9A-Za-z]{10}$/.test( window.location.pathname ); } catch { return false; }
   }
 
   /** Only a plain, finished result page: "/" with just its query (and a ref), nothing refined or location-based. */
