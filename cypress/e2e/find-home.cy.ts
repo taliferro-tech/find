@@ -264,6 +264,31 @@ describe( 'Find home - buttons and navigation', () => {
     cy.get( '[data-cy="find-awards-shell"]' ).should( 'be.visible' );
   } );
 
+  it( 'lists a company\'s news in the card when News is pressed, instead of leaving Find', () => {
+    cy.intercept( 'POST', '**/find/entity', { entity: { type: 'corporation', label: 'Company', id: 'Q182477', name: 'Nvidia', logoUrl: null } } ).as( 'entity' );
+    cy.intercept( 'POST', '**/find/entity/section', ( req ) => {
+      const section = req.body.section;
+      if ( section === 'overview' ) {
+        req.reply( { data: {
+          context: 'Company', tags: [], meta: [], videos: [], panel: { kind: 'contact', label: 'Contact', contacts: [] }, tiles: [], chips: null, lists: [], more: [],
+          actions: [ { kind: 'news', label: 'Latest news', shortLabel: 'News', url: 'https://news.google.com/search?q=Nvidia' } ],
+        } } );
+      } else if ( section === 'news' ) {
+        req.reply( { data: { articles: [ { headline: 'Nvidia ships a new chip', description: '', source: 'cnbc.com', url: 'https://www.cnbc.com/nvidia-chip', imageUrl: null, published: null } ] } } );
+      } else {
+        req.reply( { data: null } );
+      }
+    } );
+    runSearch( 'nvidia', entityResponse( 'nvidia' ) );
+    cy.get( '[data-cy="find-company-news"]' ).should( 'not.exist' );
+    cy.get( '[data-cy="find-company-news-button"]' ).filter( ':visible' ).click();
+    cy.get( '[data-cy="find-company-news"]' ).should( 'be.visible' )
+      .find( 'a.ec-news__item' ).should( 'have.attr', 'href', 'https://www.cnbc.com/nvidia-chip' )
+      .and( 'contain', 'Nvidia ships a new chip' );
+    cy.get( '[data-cy="find-company-news-button"]' ).filter( ':visible' ).click();
+    cy.get( '[data-cy="find-company-news"]' ).should( 'not.exist' );
+  } );
+
   it( 'shares a short link to the current result from the Share tab', () => {
     cy.intercept( 'POST', '**/find/share', { success: true, id: 'AbCdEfGhIj', url: 'https://find.16ahead.com/s/AbCdEfGhIj' } ).as( 'createShare' );
     runSearch( 'sushi in seattle', entityResponse( 'sushi in seattle' ) );

@@ -419,6 +419,9 @@ export interface FindCompanyMarket {
   sources: string[];
 }
 export interface FindCompanyVideos { videos: FindCardVideo[] }
+/** Another company's news this week: the card's News button lists it in Find. */
+export interface FindCompanyNewsArticle { headline: string; description: string; source: string; url: string; imageUrl: string | null; published: string | null }
+export interface FindCompanyNews { articles: FindCompanyNewsArticle[] }
 
 // Countries, US states and cities (round 5, types 7–9). Tiles and rows arrive
 // already worded, so the card only lays them out.

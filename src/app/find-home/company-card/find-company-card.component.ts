@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { FindCardVideo, FindCompanyMarket, FindCompanyVideos, FindEntity, FindEntitySection, FindEntitySummary, FindExperienceService, FindFirstPartyContact, FindFirstPartyOverview, FindStatTile } from '../../services/find-experience.service';
+import { FindCardVideo, FindCompanyMarket, FindCompanyNews, FindCompanyVideos, FindEntity, FindEntitySection, FindEntitySummary, FindExperienceService, FindFirstPartyContact, FindFirstPartyOverview, FindStatTile } from '../../services/find-experience.service';
 import { FindVideoPlayerComponent } from '../video-player/find-video-player.component';
 
 const ACTION_ICONS: Record<string, string> = {
@@ -49,6 +49,9 @@ export class FindCompanyCardComponent implements OnChanges, OnDestroy {
   /** Another company: market cap and next earnings. Another company or a product to buy: its videos. */
   market?: FindCompanyMarket | null;
   companyVideos?: FindCompanyVideos | null;
+  /** Another company's headlines, shown in the card when News is pressed. */
+  news?: FindCompanyNews | null;
+  showNews = false;
 
   expanded = false;
   readonly openSections = new Set<string>();
@@ -68,13 +71,15 @@ export class FindCompanyCardComponent implements OnChanges, OnDestroy {
 
   private load (): void {
     this.stop();
-    this.overview = this.summary = this.market = this.companyVideos = undefined;
+    this.overview = this.summary = this.market = this.companyVideos = this.news = undefined;
     this.expanded = false;
+    this.showNews = false;
     this.openSections.clear();
     this.logoFailed = false;
     this.fetch<FindFirstPartyOverview>( 'overview', data => this.overview = data );
     this.fetch<FindEntitySummary>( 'summary', data => this.summary = data?.text ? data : null );
     if ( this.isCorporation ) this.fetch<FindCompanyMarket>( 'market', data => this.market = data );
+    if ( this.isCorporation ) this.fetch<FindCompanyNews>( 'news', data => this.news = data?.articles?.length ? data : null );
     if ( this.isExternal ) this.fetch<FindCompanyVideos>( 'videos', data => this.companyVideos = data );
   }
 
@@ -159,6 +164,27 @@ export class FindCompanyCardComponent implements OnChanges, OnDestroy {
   /** Show more opens the company's background, or a product's FAQs. */
   get hasMore (): boolean {
     return !!( this.overview?.more?.length || this.overview?.faq?.length );
+  }
+
+  /** News stays in Find once there are headlines; until then (or without any) it links out. */
+  opensNews ( kind: string ): boolean {
+    return kind === 'news' && !!this.news;
+  }
+
+  /** Opens the headlines and brings them into view; pressing News again closes them. */
+  toggleNews ( panelId: string ): void {
+    this.showNews = !this.showNews;
+    if ( this.showNews ) setTimeout( () => document.getElementById( panelId )?.scrollIntoView( { behavior: 'smooth', block: 'nearest' } ) );
+  }
+
+  ago ( iso: string | null ): string {
+    const time = Date.parse( iso || '' );
+    if ( !Number.isFinite( time ) ) return '';
+    const minutes = Math.round( ( Date.now() - time ) / 60000 );
+    if ( minutes < 60 ) return `${ Math.max( minutes, 1 ) }m ago`;
+    if ( minutes < 24 * 60 ) return `${ Math.round( minutes / 60 ) }h ago`;
+    if ( minutes < 48 * 60 ) return 'Yesterday';
+    return new Date( time ).toLocaleDateString( [], { month: 'short', day: 'numeric' } );
   }
 
   actionIcon ( kind: string ): string {

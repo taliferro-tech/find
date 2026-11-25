@@ -52,8 +52,17 @@
     <ng-container *ngTemplateOutlet="moreBlocks"></ng-container>
   </div>
 
+  <section class="fp-news" id="fp-news-a" *ngIf="showNews && news" aria-label="Latest news" data-cy="find-company-news">
+    <h3 class="ec-list-title">Latest news</h3>
+    <div class="ec-news__grid">
+      <ng-container *ngFor="let article of news.articles">
+        <ng-container *ngTemplateOutlet="newsCard; context: { $implicit: article }"></ng-container>
+      </ng-container>
+    </div>
+  </section>
+
   <div class="ec-action-row">
-    <ng-container *ngTemplateOutlet="actionButtons"></ng-container>
+    <ng-container *ngTemplateOutlet="actionButtons; context: { panelId: 'fp-news-a' }"></ng-container>
     <button type="button" class="ec-toggle" *ngIf="hasMore" (click)="expanded = !expanded" [attr.aria-expanded]="expanded" aria-controls="fp-expanded">
       {{ expanded ? 'Show less' : 'Show more' }}
       <i class="fa-solid fa-chevron-down ec-chevron" [class.ec-chevron--open]="expanded" aria-hidden="true"></i>
@@ -154,11 +163,30 @@
     </div>
   </div>
 
-  <ng-container *ngTemplateOutlet="actionButtons"></ng-container>
+  <section class="fp-news" id="fp-news-b" *ngIf="showNews && news" aria-label="Latest news">
+    <h3 class="ec-list-title">Latest news</h3>
+    <div class="ec-news__list">
+      <ng-container *ngFor="let article of news.articles">
+        <ng-container *ngTemplateOutlet="newsCard; context: { $implicit: article }"></ng-container>
+      </ng-container>
+    </div>
+  </section>
+
+  <ng-container *ngTemplateOutlet="actionButtons; context: { panelId: 'fp-news-b' }"></ng-container>
   <ng-container *ngTemplateOutlet="moreLink"></ng-container>
 </section>
 
 <!-- ── Shared pieces ── -->
+<ng-template #newsCard let-article>
+  <a class="ec-news__item" [href]="article.url" target="_blank" rel="noopener">
+    <img class="ec-news__img" *ngIf="article.imageUrl" [src]="article.imageUrl" alt="" loading="lazy" />
+    <span class="ec-news__text">
+      <strong>{{ article.headline }}</strong>
+      <small>{{ article.source }}<ng-container *ngIf="ago(article.published) as when"> · {{ when }}</ng-container></small>
+    </span>
+  </a>
+</ng-template>
+
 <ng-template #metaLine>
   <p class="ec-meta" *ngIf="overview?.meta?.length; else metaSkeleton">
     <span *ngFor="let item of overview?.meta" [class.fp-meta--strong]="item.strong">{{ item.value }}</span>
@@ -301,13 +329,22 @@
   </aside>
 </ng-template>
 
-<ng-template #actionButtons>
+<ng-template #actionButtons let-panelId="panelId">
   <div class="ec-actions" *ngIf="overview?.actions?.length">
-    <a *ngFor="let action of overview?.actions; let first = first" class="ec-action" [class.ec-action--primary]="first" [href]="action.url" [attr.target]="isWebLink(action.url) ? '_blank' : null" [attr.rel]="isWebLink(action.url) ? 'noopener' : null">
-      <i [ngClass]="actionIcon(action.kind)" aria-hidden="true"></i>
-      <span class="ec-action__label">{{ action.label }}</span>
-      <span class="ec-action__short" aria-hidden="true">{{ action.shortLabel }}</span>
-    </a>
+    <ng-container *ngFor="let action of overview?.actions; let first = first">
+      <button *ngIf="opensNews(action.kind); else actionLink" type="button" class="ec-action" [class.ec-action--primary]="first" [class.ec-action--on]="showNews" (click)="toggleNews(panelId)" [attr.aria-expanded]="showNews" [attr.aria-controls]="panelId" data-cy="find-company-news-button">
+        <i [ngClass]="actionIcon(action.kind)" aria-hidden="true"></i>
+        <span class="ec-action__label">{{ action.label }}</span>
+        <span class="ec-action__short" aria-hidden="true">{{ action.shortLabel }}</span>
+      </button>
+      <ng-template #actionLink>
+        <a class="ec-action" [class.ec-action--primary]="first" [href]="action.url" [attr.target]="isWebLink(action.url) ? '_blank' : null" [attr.rel]="isWebLink(action.url) ? 'noopener' : null">
+          <i [ngClass]="actionIcon(action.kind)" aria-hidden="true"></i>
+          <span class="ec-action__label">{{ action.label }}</span>
+          <span class="ec-action__short" aria-hidden="true">{{ action.shortLabel }}</span>
+        </a>
+      </ng-template>
+    </ng-container>
   </div>
 </ng-template>
 
