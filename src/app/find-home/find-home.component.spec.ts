@@ -710,7 +710,7 @@ describe('FindHomeComponent', () => {
     harness.detectChanges();
 
     const sections = http.match(r => r.url.endsWith('/find/entity/section'));
-    expect(sections.map(req => req.request.body.section).sort()).toEqual([ 'market', 'overview', 'summary', 'videos' ]);
+    expect(sections.map(req => req.request.body.section).sort()).toEqual([ 'market', 'news', 'overview', 'summary', 'videos' ]);
     sections.find(req => req.request.body.section === 'overview')!.flush({
       data: {
         context: 'Technology company',
