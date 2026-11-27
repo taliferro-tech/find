@@ -1,7 +1,7 @@
 import { fakeAsync, flush, flushMicrotasks, tick, TestBed } from '@angular/core/testing';
 import { HttpEventType, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { FindHomeComponent } from './find-home.component';
 import { routes } from '../app.routes';
@@ -1824,6 +1824,37 @@ describe('FindHomeComponent', () => {
     expect(component.currentBusinessHours?.days.length).toBe(7);
     expect(root().querySelector('.find-card-summary')?.textContent).toContain('Chinese and American breakfast and brunch.');
     expect(root().querySelector('.find-ai-summary')?.textContent).toContain("Young's Restaurant closes at 3:00 pm.");
+  }));
+
+  it('a nearby shopping search: Store strip for the product, store page for a guide shop, summary about the store', fakeAsync(() => {
+    component.query = 'where can i find dress shoes near me';
+    harness.detectChanges();
+    submitButton().click();
+    tick();
+    http.expectOne(r => r.url.endsWith('/find/search')).flush({
+      ...makeLocalResponse('where can i find dress shoes near me'),
+      shoppingIntent: true,
+      productQuery: 'dress shoes',
+      results: [
+        makeResult({ title: 'LIKELIHOOD Seattle', url: 'https://likelihood.us', address: 'Seattle, WA', isGuideShop: true, findQuery: 'LIKELIHOOD Seattle' }),
+        makeResult({ title: 'KAVU White Center', url: 'https://kavu.com', address: '9064 Delridge Wy SW, Seattle, WA 98106, USA' }),
+      ],
+    });
+    tick();
+    const summarize = http.expectOne(r => r.url.endsWith('/find/summarize'));
+    expect(summarize.request.body.query).toBe('LIKELIHOOD Seattle');
+    summarize.flush({ answer: '' });
+    tick();
+    harness.detectChanges();
+
+    expect(root().querySelector('app-market-strip')).not.toBeNull();
+    expect(fetchSpy.calls.allArgs().some(([, init]) => String(init?.body || '').includes('"query":"dress shoes"'))).toBeTrue();
+    expect(component.currentActions.map(a => a.key)).toEqual(['store-page', 'site', 'copy-link', 'knowledge']);
+    const storePage = root().querySelector<HTMLButtonElement>('[data-cy="find-store-page-action"]')!;
+    expect(storePage.textContent).toContain('Store page');
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    storePage.click();
+    expect(navigate.calls.mostRecent().args[1]?.queryParams?.['query']).toBe('LIKELIHOOD Seattle');
   }));
 
   it('formats relative publish times', () => {

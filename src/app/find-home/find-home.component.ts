@@ -56,6 +56,8 @@ interface FindAction {
   icon: string;
   href?: string;
   copyText?: string;
+  /** Runs this search in Find (a guide shop's store page). */
+  searchQuery?: string;
 }
 
 interface FindPagerTarget {
@@ -1425,7 +1427,13 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     // address, phone, or a local search) also gets Directions first, plus
     // Call when there's a phone number - Go · Call · Site · Copy.
     const actions: FindAction[] = [];
-    const mapsUrl = this.isPlaceResult ? this.directionsUrl : '';
+    // A guide shop in a nearby list: its store page in Find comes first, and
+    // there's no Directions (we only know its city, not its address).
+    const guideQuery = this.currentCard.isGuideShop ? String( this.currentCard.findQuery || '' ).trim() : '';
+    if ( guideQuery ) {
+      actions.push( { key: 'store-page', label: 'Store page', shortLabel: 'Store', icon: 'fa-store', searchQuery: guideQuery } );
+    }
+    const mapsUrl = this.isPlaceResult && !guideQuery ? this.directionsUrl : '';
     if ( mapsUrl ) {
       actions.push( { key: 'maps', label: this.currentBusinessAddress ? 'Directions' : 'Open in Maps', shortLabel: 'Go', icon: 'fa-location-arrow', href: mapsUrl } );
     }
@@ -1939,7 +1947,10 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     // brand names and drifting from approved wording.
     if ( !card || card.isFirstParty ) return;
     this.summarySub = this.findExperienceService.summarize( {
-      query: this.query,
+      // A nearby business is described as itself: asked with the search
+      // ("where can i find dress shoes"), the summary answered the question
+      // in general instead of saying what this store is.
+      query: this.isLocalMode ? card.title : this.query,
       url: card.url,
       title: card.title,
     } ).subscribe( {
@@ -2188,6 +2199,14 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     }
 
     this.loadingStartedAtMs = null;
+  }
+
+  /** A "Store page" action: searches the shop's name, which opens its store page. */
+  openSearchAction ( action: FindAction ): void {
+    const q = String( action.searchQuery || '' ).trim();
+    if ( !q ) return;
+    this.query = q;
+    this.navigate( q );
   }
 
   private navigate ( q: string, context?: string | null ): void {
