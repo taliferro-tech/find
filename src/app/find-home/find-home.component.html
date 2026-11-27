@@ -446,7 +446,7 @@
         </ng-template>
       </div>
       <!-- TODD Market's "From local stores": shopping searches only, under the result. -->
-      <app-market-strip *ngIf="result?.shoppingIntent === true" [query]="result.query || query"></app-market-strip>
+      <app-market-strip *ngIf="result?.shoppingIntent === true" [query]="result.productQuery || result.query || query"></app-market-strip>
       <div class="find-lead-vault-cta" *ngIf="isPersonSearch">
         <p>Looking for contact details or prospects?</p>
         <a [href]="leadVaultSearchUrl">Search “{{ result.query || query }}” in Lead Vault</a>
@@ -543,6 +543,12 @@
   <ng-template #actionBar>
     <div class="find-actions" *ngIf="currentActions.length || canWatch">
       <ng-container *ngFor="let action of currentActions; let first = first; trackBy: trackAction">
+        <button *ngIf="action.searchQuery; else linkOrCopyAction" type="button" class="find-action" [class.find-action--primary]="first" data-cy="find-store-page-action" (click)="openSearchAction(action)">
+          <i class="fa-solid" [ngClass]="action.icon" aria-hidden="true"></i>
+          <span class="find-action__label">{{ action.label }}</span>
+          <span class="find-action__short" aria-hidden="true">{{ action.shortLabel }}</span>
+        </button>
+        <ng-template #linkOrCopyAction>
         <a *ngIf="action.href; else copyActionButton" class="find-action" [class.find-action--primary]="first" [href]="action.href" target="_blank" rel="noopener">
           <i class="fa-solid" [ngClass]="action.icon" aria-hidden="true"></i>
           <span class="find-action__label">{{ action.label }}</span>
@@ -554,6 +560,7 @@
             <span class="find-action__label">{{ copiedActionKey === action.key ? 'Copied' : action.label }}</span>
             <span class="find-action__short" aria-hidden="true">{{ copiedActionKey === action.key ? 'Copied' : action.shortLabel }}</span>
           </button>
+        </ng-template>
         </ng-template>
       </ng-container>
       <button type="button" class="find-action find-action--watch" *ngIf="canWatch" [class.find-action--watching]="!!currentWatch" [attr.aria-pressed]="!!currentWatch" [disabled]="watchBusy" (click)="toggleWatch()">

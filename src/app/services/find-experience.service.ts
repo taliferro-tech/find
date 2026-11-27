@@ -64,6 +64,9 @@ export interface FindRankedResult {
   confidence: number;
   pills: string[];
   isFirstParty?: boolean;
+  /** A shop in our Store guides, in a nearby list; findQuery opens its store page. */
+  isGuideShop?: boolean;
+  findQuery?: string;
   entityId?: string;
   entityName?: string;
   logoUrl?: string;
@@ -653,6 +656,8 @@ export interface FindSearchResponse {
   queryType: FindQueryType;
   /** The search is for something to buy (TODD Market's strip shows only then). */
   shoppingIntent?: boolean;
+  /** A nearby shopping search's thing to buy ("dress shoes"), for the Store strip. */
+  productQuery?: string;
   handoff?: {
     route: string;
     query: string;
@@ -890,7 +895,7 @@ export class FindExperienceService {
     if ( message?.type === 'results' ) {
       return { type: 'results', response: {
         success: true, query: message.query || query, normalizedQuery: message.query || query,
-        queryType: message.queryType, shoppingIntent: message.shoppingIntent,
+        queryType: message.queryType, shoppingIntent: message.shoppingIntent, productQuery: message.productQuery,
         results: Array.isArray( message.results ) ? message.results : [], selectedIndex: 0, answer: null,
       } };
     }
