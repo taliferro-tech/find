@@ -1664,6 +1664,17 @@ export class FindHomeComponent implements OnInit, OnDestroy {
 
   private static readonly MAX_ANSWER_IMAGES = 8;
 
+  /**
+   * The Images row stays closed until the user taps "Show images", so no
+   * picture is downloaded unless asked for (Ty, 2026-11-28: don't slow the
+   * page down). Each new search starts closed again.
+   */
+  answerImagesShown = false;
+
+  showAnswerImages (): void {
+    this.answerImagesShown = true;
+  }
+
   get isGroundedAnswerSlide (): boolean {
     // The generated answer leads as its own slide (see viewingGroundedAnswer)
     // rather than replacing the top-ranked source card — swiping forward
@@ -2516,6 +2527,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     this.saveToHistory( query );
     // Find Score: the backend's points when it scored the search, else the
     // old on-device count.
+    this.answerImagesShown = false;
     this.resultAward = response?.score || null;
     this.dailyService.noteSearch( response?.daily );
     const newlyUnlocked = response?.score ? this.awardsService.applyAward( response.score ) : this.awardsService.recordSearch();

@@ -2401,7 +2401,26 @@ a.find-tab {
 
 /* Images from the answer's references, under the result. */
 .find-answer-images {
-  margin-top: 28px;
+  margin: 24px 40px 0;
+}
+
+.find-answer-images__show {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .16s ease;
+}
+
+.find-answer-images__show:hover {
+  background: var(--surface2);
 }
 
 .find-answer-images__title {
@@ -2453,6 +2472,12 @@ a.find-tab {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  .find-answer-images {
+    margin: 16px 16px 0;
+  }
 }
 
 @media (max-width: 600px) {
