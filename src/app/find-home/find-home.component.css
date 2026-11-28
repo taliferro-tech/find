@@ -2398,3 +2398,71 @@ a.find-tab {
 }
 
 .app-global-actions { position: fixed; top: 1rem; right: 1.25rem; z-index: 10002; display: inline-flex; align-items: center; gap: .5rem; }
+
+/* Images from the answer's references, under the result. */
+.find-answer-images {
+  margin-top: 28px;
+}
+
+.find-answer-images__title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.find-answer-images__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.find-answer-images__item {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--surface2);
+}
+
+.find-answer-images__item img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transition: transform .2s ease;
+}
+
+.find-answer-images__item:hover img {
+  transform: scale(1.03);
+}
+
+.find-answer-images__site {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  max-width: calc(100% - 16px);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .6);
+  color: #fff;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 600px) {
+  .find-answer-images__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .find-answer-images__item img {
+    transition: none;
+  }
+}

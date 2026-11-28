@@ -1826,6 +1826,33 @@ describe('FindHomeComponent', () => {
     expect(root().querySelector('.find-ai-summary')?.textContent).toContain("Young's Restaurant closes at 3:00 pm.");
   }));
 
+  it('shows the references\' images under the answer, without the hero or Find artwork', fakeAsync(() => {
+    const hero = 'https://img.example.com/hero.jpg';
+    runSearch('what to do with leftover turkey', makeEntityResponse('what to do with leftover turkey', {
+      queryType: 'question',
+      results: [
+        makeResult({ url: 'https://a.com/1', displayUrl: 'a.com', imageUrl: hero }),
+        makeResult({ rank: 2, url: 'https://b.com/2', displayUrl: 'b.com', imageUrl: 'https://img.example.com/b.jpg' }),
+        makeResult({ rank: 3, url: 'https://c.com/3', displayUrl: 'c.com', imageUrl: 'https://find.16ahead.com/fallback/sources/c.png' }),
+        makeResult({ rank: 4, url: 'https://d.com/4', displayUrl: 'd.com', imageUrl: 'https://img.example.com/d.jpg' }),
+        makeResult({ rank: 5, url: 'https://e.com/5', displayUrl: 'e.com', imageUrl: 'https://img.example.com/not-a-reference.jpg' }),
+      ],
+      answer: {
+        text: 'Make turkey pot pie or soup.',
+        imageUrl: hero,
+        references: ['a', 'b', 'c', 'd'].map((x, i) => ({ title: `Ref ${x}`, url: `https://${x}.com/${i + 1}`, displayUrl: `${x}.com`, sourceType: 'publisher' })),
+      },
+    } as Partial<FindSearchResponse>));
+
+    expect(component.answerImages.map(pic => pic.image)).toEqual(['https://img.example.com/b.jpg', 'https://img.example.com/d.jpg']);
+    const items = root().querySelectorAll<HTMLAnchorElement>('.find-answer-images__item');
+    expect(items.length).toBe(2);
+    expect(items[0].getAttribute('href')).toBe('https://b.com/2');
+    expect(items[0].textContent).toContain('b.com');
+    // The reference cards themselves stay text-only.
+    expect(root().querySelectorAll('.find-question-source img').length).toBe(0);
+  }));
+
   it('formats relative publish times', () => {
     const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
     expect(component.relativeTime(ago(10 * 1000))).toBe('just now');
