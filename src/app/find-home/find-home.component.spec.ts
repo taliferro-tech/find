@@ -1836,6 +1836,12 @@ describe('FindHomeComponent', () => {
     }));
 
     expect(component.answerImages.map(pic => pic.url)).toEqual(['https://en.wikipedia.org/wiki/Clothing_in_Ethiopia', 'https://shop.example/kemis']);
+    // Closed until tapped: nothing downloads before the user asks.
+    expect(root().querySelectorAll('.find-answer-images img').length).toBe(0);
+    const show = root().querySelector<HTMLButtonElement>('.find-answer-images__show')!;
+    expect(show.textContent).toContain('Show images (2)');
+    show.click();
+    harness.detectChanges();
     expect(root().querySelectorAll('.find-answer-images__item').length).toBe(2);
   }));
 
@@ -1859,6 +1865,8 @@ describe('FindHomeComponent', () => {
 
     // References first, then the other sources.
     expect(component.answerImages.map(pic => pic.image)).toEqual(['https://img.example.com/b.jpg', 'https://img.example.com/d.jpg', 'https://img.example.com/not-a-reference.jpg']);
+    root().querySelector<HTMLButtonElement>('.find-answer-images__show')!.click();
+    harness.detectChanges();
     const items = root().querySelectorAll<HTMLAnchorElement>('.find-answer-images__item');
     expect(items.length).toBe(3);
     expect(items[0].getAttribute('href')).toBe('https://b.com/2');
