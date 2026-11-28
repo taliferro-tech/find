@@ -1631,29 +1631,38 @@ export class FindHomeComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Pictures from the answer's references, shown under the result (a user
-   * asked for image search, 2026-11-27). The reference cards stay text-only:
-   * each reference is also a ranked result that already carries its page's
-   * image, so this costs no extra request. Leaves out the hero picture, Find's
-   * own artwork (default art and branded source cards) and broken images.
+   * The Images row under the result (a user asked for image search,
+   * 2026-11-27). Pictures come from the search's own sources, which already
+   * carry their page's image, so this costs no extra request. An answer's
+   * references come first (their cards stay text-only), then the rest of the
+   * sources in rank order: a "top pick" result has no references at all.
+   * Leaves out the hero picture, Find's own artwork (default art and branded
+   * source cards) and broken images. Not shown for cards, places, news,
+   * weather, conversions or instant answers.
    */
   get answerImages (): { url: string; image: string; site: string; title: string }[] {
-    if ( !this.isGroundedAnswerSlide ) return [];
+    if ( this.activeView !== 'result' || this.showEntityCard || this.isSingleResultMode || this.isLocalMode || this.isHeadlineMode ) return [];
     const normalize = ( url: string ) => String( url || '' ).trim().replace( /\/+$/, '' );
-    const imageByUrl = new Map<string, string>();
+    const byUrl = new Map<string, FindRankedResult>();
     for ( const item of this.allResults ) {
-      if ( item?.url && item.imageUrl ) imageByUrl.set( normalize( item.url ), String( item.imageUrl ).trim() );
+      if ( item?.url ) byUrl.set( normalize( item.url ), item );
     }
+    const referenceItems = this.isGroundedAnswerSlide ?
+      this.questionReferences.map( ref => byUrl.get( normalize( ref.url ) ) ).filter( ( item ): item is FindRankedResult => !!item ) :
+      [];
     const seen = new Set<string>( [ this.currentOwnImage ].filter( Boolean ) );
     const images: { url: string; image: string; site: string; title: string }[] = [];
-    for ( const ref of this.questionReferences ) {
-      const image = imageByUrl.get( normalize( ref.url ) ) || '';
+    for ( const item of [ ...referenceItems, ...this.allResults ] ) {
+      if ( images.length >= FindHomeComponent.MAX_ANSWER_IMAGES ) break;
+      const image = String( item.imageUrl || '' ).trim();
       if ( !this.isUsableImage( image ) || this.isFindFallbackUrl( image ) || seen.has( image ) ) continue;
       seen.add( image );
-      images.push( { url: ref.url, image, site: ref.displayUrl || '', title: ref.title || '' } );
+      images.push( { url: item.url, image, site: item.displayUrl || '', title: item.title || '' } );
     }
     return images;
   }
+
+  private static readonly MAX_ANSWER_IMAGES = 8;
 
   get isGroundedAnswerSlide (): boolean {
     // The generated answer leads as its own slide (see viewingGroundedAnswer)

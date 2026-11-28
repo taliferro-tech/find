@@ -1,6 +1,6 @@
 {
   "name": "find",
-  "version": "2026.11.25-build.1",
+  "version": "2026.11.27-build.1",
   "scripts": {
     "auth:ui": "npx google-artifactregistry-auth",
     "ng": "ng",

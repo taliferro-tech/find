@@ -10,6 +10,18 @@ function stubSummarize (): void {
   cy.intercept( 'POST', '**/find/summarize', { answer: '' } ).as( 'summarize' );
 }
 
+// The card lookup (/find/entity) and the awards calls (score/profile,
+// score/import) used to reach the live API. The live entity response carries a
+// "new kind of card" badge, whose overlay popped up over the tab bar after
+// runSearch had already dismissed the first award (failed 2026-11-27 evening,
+// passed an hour earlier). No card, and failed awards calls, keep the app on
+// its local awards as it is offline. Tests that need a card stub /find/entity
+// themselves; a later intercept wins.
+beforeEach( () => {
+  cy.intercept( 'POST', '**/find/entity', { entity: null } ).as( 'noEntity' );
+  cy.intercept( 'POST', '**/find/score/**', { statusCode: 503, body: {} } ).as( 'score' );
+} );
+
 function stubSearch ( response: Record<string, unknown> ): void {
   cy.intercept( 'POST', '**/find/search', response ).as( 'search' );
 }
