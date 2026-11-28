@@ -445,6 +445,16 @@
           </div>
         </ng-template>
       </div>
+      <!-- Images from the answer's references (reference cards stay text-only). -->
+      <ng-container *ngIf="answerImages as images"><section class="find-answer-images" *ngIf="images.length" aria-label="Images">
+        <h3 class="find-answer-images__title">Images</h3>
+        <div class="find-answer-images__grid">
+          <a class="find-answer-images__item" *ngFor="let pic of images" [href]="pic.url" target="_blank" rel="noopener" [title]="pic.title">
+            <img [src]="pic.image" [alt]="pic.title" loading="lazy" (load)="onImageLoad($event, pic.image)" (error)="onImageError(pic.image)" />
+            <span class="find-answer-images__site">{{ pic.site }}</span>
+          </a>
+        </div>
+      </section></ng-container>
       <!-- TODD Market's "From local stores": shopping searches only, under the result. -->
       <app-market-strip *ngIf="result?.shoppingIntent === true" [query]="result.query || query"></app-market-strip>
       <div class="find-lead-vault-cta" *ngIf="isPersonSearch">

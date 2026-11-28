@@ -1630,6 +1630,31 @@ export class FindHomeComponent implements OnInit, OnDestroy {
     return this.result?.answer?.references || [];
   }
 
+  /**
+   * Pictures from the answer's references, shown under the result (a user
+   * asked for image search, 2026-11-27). The reference cards stay text-only:
+   * each reference is also a ranked result that already carries its page's
+   * image, so this costs no extra request. Leaves out the hero picture, Find's
+   * own artwork (default art and branded source cards) and broken images.
+   */
+  get answerImages (): { url: string; image: string; site: string; title: string }[] {
+    if ( !this.isGroundedAnswerSlide ) return [];
+    const normalize = ( url: string ) => String( url || '' ).trim().replace( /\/+$/, '' );
+    const imageByUrl = new Map<string, string>();
+    for ( const item of this.allResults ) {
+      if ( item?.url && item.imageUrl ) imageByUrl.set( normalize( item.url ), String( item.imageUrl ).trim() );
+    }
+    const seen = new Set<string>( [ this.currentOwnImage ].filter( Boolean ) );
+    const images: { url: string; image: string; site: string; title: string }[] = [];
+    for ( const ref of this.questionReferences ) {
+      const image = imageByUrl.get( normalize( ref.url ) ) || '';
+      if ( !this.isUsableImage( image ) || this.isFindFallbackUrl( image ) || seen.has( image ) ) continue;
+      seen.add( image );
+      images.push( { url: ref.url, image, site: ref.displayUrl || '', title: ref.title || '' } );
+    }
+    return images;
+  }
+
   get isGroundedAnswerSlide (): boolean {
     // The generated answer leads as its own slide (see viewingGroundedAnswer)
     // rather than replacing the top-ranked source card — swiping forward
