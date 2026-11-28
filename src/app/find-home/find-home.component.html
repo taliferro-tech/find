@@ -446,21 +446,21 @@
         </ng-template>
       </div>
       <!-- Images: pictures from the search's own sources (references first). Reference cards stay text-only. -->
-      <ng-container *ngIf="answerImages as images"><section class="find-answer-images" *ngIf="images.length" aria-label="Images">
+      <section class="find-answer-images" *ngIf="answerImages.length" aria-label="Images">
         <!-- Closed until tapped: no picture downloads unless the user asks. -->
         <button type="button" class="find-answer-images__show" *ngIf="!answerImagesShown; else imagesOpen" (click)="showAnswerImages()">
-          <i class="fa-solid fa-image" aria-hidden="true"></i> Show images ({{ images.length }})
+          <i class="fa-solid fa-image" aria-hidden="true"></i> Show images ({{ answerImages.length }})
         </button>
         <ng-template #imagesOpen>
           <h3 class="find-answer-images__title">Images</h3>
           <div class="find-answer-images__grid">
-            <a class="find-answer-images__item" *ngFor="let pic of images" [href]="pic.url" target="_blank" rel="noopener" [title]="pic.title">
+            <a class="find-answer-images__item" *ngFor="let pic of answerImages; trackBy: trackAnswerImage" [href]="pic.url" target="_blank" rel="noopener" [title]="pic.title">
               <img [src]="pic.image" [alt]="pic.title" loading="lazy" (load)="onImageLoad($event, pic.image)" (error)="onImageError(pic.image)" />
               <span class="find-answer-images__site">{{ pic.site }}</span>
             </a>
           </div>
         </ng-template>
-      </section></ng-container>
+      </section>
       <!-- TODD Market's "From local stores": shopping searches only, under the result. -->
       <app-market-strip *ngIf="result?.shoppingIntent === true" [query]="result.query || query"></app-market-strip>
       <div class="find-lead-vault-cta" *ngIf="isPersonSearch">
