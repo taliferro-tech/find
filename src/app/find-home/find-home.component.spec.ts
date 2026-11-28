@@ -1826,6 +1826,19 @@ describe('FindHomeComponent', () => {
     expect(root().querySelector('.find-ai-summary')?.textContent).toContain("Young's Restaurant closes at 3:00 pm.");
   }));
 
+  it('fills the Images row from the sources when a top pick has no references', fakeAsync(() => {
+    runSearch('ethiopian cultural dress', makeEntityResponse('ethiopian cultural dress', {
+      results: [
+        makeResult({ url: 'https://ethiopian.store/', displayUrl: 'ethiopian.store', imageUrl: '' }),
+        makeResult({ rank: 2, url: 'https://en.wikipedia.org/wiki/Clothing_in_Ethiopia', displayUrl: 'wikipedia.org', imageUrl: 'https://img.example.com/w.jpg' }),
+        makeResult({ rank: 3, url: 'https://shop.example/kemis', displayUrl: 'shop.example', imageUrl: 'https://img.example.com/k.jpg' }),
+      ],
+    }));
+
+    expect(component.answerImages.map(pic => pic.url)).toEqual(['https://en.wikipedia.org/wiki/Clothing_in_Ethiopia', 'https://shop.example/kemis']);
+    expect(root().querySelectorAll('.find-answer-images__item').length).toBe(2);
+  }));
+
   it('shows the references\' images under the answer, without the hero or Find artwork', fakeAsync(() => {
     const hero = 'https://img.example.com/hero.jpg';
     runSearch('what to do with leftover turkey', makeEntityResponse('what to do with leftover turkey', {
@@ -1844,9 +1857,10 @@ describe('FindHomeComponent', () => {
       },
     } as Partial<FindSearchResponse>));
 
-    expect(component.answerImages.map(pic => pic.image)).toEqual(['https://img.example.com/b.jpg', 'https://img.example.com/d.jpg']);
+    // References first, then the other sources.
+    expect(component.answerImages.map(pic => pic.image)).toEqual(['https://img.example.com/b.jpg', 'https://img.example.com/d.jpg', 'https://img.example.com/not-a-reference.jpg']);
     const items = root().querySelectorAll<HTMLAnchorElement>('.find-answer-images__item');
-    expect(items.length).toBe(2);
+    expect(items.length).toBe(3);
     expect(items[0].getAttribute('href')).toBe('https://b.com/2');
     expect(items[0].textContent).toContain('b.com');
     // The reference cards themselves stay text-only.
