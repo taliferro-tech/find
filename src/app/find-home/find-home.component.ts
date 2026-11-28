@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { Component, DoCheck, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -74,6 +74,9 @@ function distanceMeters ( from: { latitude: number; longitude: number }, latitud
   return 6371000 * 2 * Math.atan2( Math.sqrt( a ), Math.sqrt( 1 - a ) );
 }
 
+/** One picture in the Images row under a result. */
+interface FindAnswerImage { url: string; image: string; site: string; title: string }
+
 @Component( {
   selector: 'app-find-home',
   standalone: true,
@@ -86,7 +89,7 @@ function distanceMeters ( from: { latitude: number; longitude: number }, latitud
   // stacked and the result sat below the fold. Re-render on the client instead.
   host: { ngSkipHydration: 'true' }
 } )
-export class FindHomeComponent implements OnInit, OnDestroy {
+export class FindHomeComponent implements OnInit, DoCheck, OnDestroy {
   query = '';
   activeContext = '';
   isLoading = false;
@@ -1640,7 +1643,30 @@ export class FindHomeComponent implements OnInit, OnDestroy {
    * source cards) and broken images. Not shown for cards, places, news,
    * weather, conversions or instant answers.
    */
-  get answerImages (): { url: string; image: string; site: string; title: string }[] {
+  answerImages: FindAnswerImage[] = [];
+  private answerImagesKey = '';
+  private answerImagesSource: FindRankedResult[] | null = null;
+
+  /**
+   * Keeps answerImages a plain property for the template. A getter there ran
+   * on every change check and returned a new array each time, so *ngFor
+   * rebuilt the tiles, their images reloaded, and each load ran another
+   * check (the page slowed down, 2026-11-28). This rebuilds the list only
+   * when something it depends on changes.
+   */
+  ngDoCheck (): void {
+    const key = [ this.activeView, this.resultIndex, this.viewingGroundedAnswer, !!this.entity, this.entityDismissed, this.brokenImageUrls.size, this.result?.queryType, this.result?.rssBacked, this.result?.answer?.imageUrl ].join( '|' );
+    if ( key === this.answerImagesKey && this.allResults === this.answerImagesSource ) return;
+    this.answerImagesKey = key;
+    this.answerImagesSource = this.allResults;
+    this.answerImages = this.buildAnswerImages();
+  }
+
+  trackAnswerImage ( _index: number, picture: FindAnswerImage ): string {
+    return picture.image;
+  }
+
+  private buildAnswerImages (): FindAnswerImage[] {
     if ( this.activeView !== 'result' || this.showEntityCard || this.isSingleResultMode || this.isLocalMode || this.isHeadlineMode ) return [];
     const normalize = ( url: string ) => String( url || '' ).trim().replace( /\/+$/, '' );
     const byUrl = new Map<string, FindRankedResult>();
@@ -1651,7 +1677,7 @@ export class FindHomeComponent implements OnInit, OnDestroy {
       this.questionReferences.map( ref => byUrl.get( normalize( ref.url ) ) ).filter( ( item ): item is FindRankedResult => !!item ) :
       [];
     const seen = new Set<string>( [ this.currentOwnImage ].filter( Boolean ) );
-    const images: { url: string; image: string; site: string; title: string }[] = [];
+    const images: FindAnswerImage[] = [];
     for ( const item of [ ...referenceItems, ...this.allResults ] ) {
       if ( images.length >= FindHomeComponent.MAX_ANSWER_IMAGES ) break;
       const image = String( item.imageUrl || '' ).trim();

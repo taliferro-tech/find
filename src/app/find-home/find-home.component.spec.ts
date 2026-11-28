@@ -1836,6 +1836,12 @@ describe('FindHomeComponent', () => {
     }));
 
     expect(component.answerImages.map(pic => pic.url)).toEqual(['https://en.wikipedia.org/wiki/Clothing_in_Ethiopia', 'https://shop.example/kemis']);
+    // A plain property, rebuilt only when its inputs change: a new array on
+    // every change check made *ngFor rebuild the tiles and slowed the page.
+    const before = component.answerImages;
+    harness.detectChanges();
+    harness.detectChanges();
+    expect(component.answerImages).toBe(before);
     // Closed until tapped: nothing downloads before the user asks.
     expect(root().querySelectorAll('.find-answer-images img').length).toBe(0);
     const show = root().querySelector<HTMLButtonElement>('.find-answer-images__show')!;
